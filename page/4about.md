@@ -9,21 +9,16 @@ type: page
 * content
 {:toc}
 
+
 ## 关于我
 
-<iframe src="https://githubbadge.appspot.com/haulf?s=1" style="border: 0;height: 142px;width: 200px;overflow: hidden;" frameBorder="0"></iframe>
-
 就职于某数字手机公司，从事Android系统开发工作。
-
 
 
 ## 联系我
 
 * GitHub：[haulf](https://github.com/haulf)
 * email：haofeng_ai@sina.com
-
-
-~欢迎使用~
 
 
 ## 友情链接
