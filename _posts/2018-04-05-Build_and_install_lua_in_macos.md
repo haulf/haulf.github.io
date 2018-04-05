@@ -10,18 +10,16 @@ excerpt: 家里用的是Mac一体机，与公司用的Windows和Linux不同。�
 * content
 {:toc}
 
-## 在Mac下编译和安装Lua
 
+## 1 起因
 
-### 1 起因
+在公司里都是用Windows和Linux，系统中都安装了最新版本的Lua。家里一直使用的是Mac系统，打算在Mac里下载和安装Lua。 
 
-​    在公司里都是用Windows和Linux，系统中都安装了最新版本的Lua。家里一直使用的是Mac系统，打算在Mac里下载和安装Lua。 
-
-### 2 详细步骤
+## 2 详细步骤
 
 #### 2.1 下载最新的lua源码
 
-​    从Lua的官方网站可知，目前Lua的最新版本是5.3.4。下面采用curl工具下载源代码包。
+从Lua的官方网站可知，目前Lua的最新版本是5.3.4。下面采用curl工具下载源代码包。
 
 ```shell
 ➜ /Users/aihaofeng/Documents/workspace/temp curl -R -O http://www.lua.org/ftp/lua-5.3.4.tar.gz
@@ -30,9 +28,9 @@ excerpt: 家里用的是Mac一体机，与公司用的Windows和Linux不同。�
 100 296k 100 296k 0 0 11179 0 0:00:27 0:00:27 --:--:-- 8833
 ```
 
-#### 2.2 解压缩源代码
+### 2.2 解压缩源代码
 
-​    源代码包不大，很快就下载下来了。用tar命令进行解压缩。
+源代码包不大，很快就下载下来了。用tar命令进行解压缩。
 
 ```
 ➜ /Users/aihaofeng/Documents/workspace/temp tar -xvf lua-5.3.4.tar.gz
@@ -115,9 +113,9 @@ x lua-5.3.4/src/lstrlib.c
 x lua-5.3.4/README
 ```
 
-#### 2.3 进入源码目录进行编译
+### 2.3 进入源码目录进行编译
 
-​    源代码里的Makefile文件写的很通用，直接采用make命令，加上操作系统类型参数就可以直接编译了。这里是Mac系统，所以带的参数为macosx。
+源代码里的Makefile文件写的很通用，直接采用make命令，加上操作系统类型参数就可以直接编译了。这里是Mac系统，所以带的参数为macosx。
 
 ```
 ➜ /Users/aihaofeng/Documents/workspace/temp cd lua-5.3.4
@@ -171,9 +169,9 @@ cc -O2 -Wall -Wextra -DLUA_COMPAT_5_2 -DLUA_USE_MACOSX -c -o luac.o luac.c
 cc -o luac luac.o liblua.a -lm -lreadline
 ```
 
-#### 2.4 查看编译是否成功
+### 2.4 查看编译是否成功
 
-​    采用`make test`命令进行测试。其实就是执行编译后的可执行文件，这个可执行文件在`src/`目录下。
+采用`make test`命令进行测试。其实就是执行编译后的可执行文件，这个可执行文件在`src/`目录下。
 
 ```shell
 ➜ /Users/aihaofeng/Documents/workspace/temp/lua-5.3.4 make test
@@ -181,9 +179,9 @@ src/lua -v
 Lua 5.3.4 Copyright (C) 1994-2017 Lua.org, PUC-Rio
 ```
 
-#### 2.5 安装Lua到环境中
+### 2.5 安装Lua到环境中
 
-​    采用`make install`命令进行安装。为了避免没有权限，加上sudo，输入密码。
+采用`make install`命令进行安装。为了避免没有权限，加上sudo，输入密码。
 
 ```shell
 ➜ /Users/aihaofeng/Documents/workspace/temp/lua-5.3.4 sudo make install
@@ -195,9 +193,9 @@ cd src && install -p -m 0644 liblua.a /usr/local/lib
 cd doc && install -p -m 0644 lua.1 luac.1 /usr/local/man/man1
 ```
 
-#### 2.6 测试是否安装成功
+### 2.6 测试是否安装成功
 
-​    在终端里直接输入lua，得到如下界面，说明安装成功。
+在终端里直接输入lua，得到如下界面，说明安装成功。
 
 ```shell
 ➜ /Users/aihaofeng/Documents/workspace/temp/lua-5.3.4 lua
@@ -205,10 +203,10 @@ Lua 5.3.4 Copyright (C) 1994-2017 Lua.org, PUC-Rio
 > os.exit()
 ```
 
-### 3 小结
+## 3 小结
 
-​    从上面的安装步骤看，其和在Linux下编译安装基本是一样的。
+从上面的安装步骤看，其和在Linux下编译安装基本是一样的。
 
-### 4 参考资料
+## 4 参考资料
 
 * [MacOS Lua update to v5.3.3](https://www.jianshu.com/p/5df2e3efc0a7)
