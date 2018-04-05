@@ -1,10 +1,10 @@
 ---
 layout: post
-title:  "hello jekyll!"
-date:   2015-02-10 15:14:54
+title:  "Everything happens for the best!"
+date:   2018-04-05 14:13:54
 categories: jekyll
 tags: jekyll
-excerpt: 当年创建 jekyll 时默认的一篇文章，没什么意义，我也一直没删除，留个纪念吧。
+excerpt: Everything happens for the best! 我一直坚信生命中所有的遇到绝非偶然，一切都是最好的安排。
 mathjax: true
 ---
 
