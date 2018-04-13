@@ -346,21 +346,17 @@ Go的可执行文件都比相对应的源代码文件要大很多，这恰恰说
 
 1. 在合适的位置使用打印语句输出相关变量的值（print/println 和fmt.Print/fmt.Println/fmt.Printf）。
 2. 在fmt.Printf中使用下面的说明符来打印有关变量的相关信息：
-
--%+v 打印包括字段在内的实例的完整信息
-
--%#v 打印包括字段和限定类型名称在内的实例的完整信息
-
--%T 打印某个类型的完整说明
-
+- %+v 打印包括字段在内的实例的完整信息
+- %#v 打印包括字段和限定类型名称在内的实例的完整信息
+- %T 打印某个类型的完整说明
 3. 使用panic语句来获取栈跟踪信息（直到 panic 时所有被调用函数的列表）。
 4. 使用关键字defer来跟踪代码执行过程。
 
 ### 4.3 构建并运行Go程序
 
 使用Go自带的更加方便的工具来构建应用程序：
-- go build 编译并安装自身包和依赖包
-- go install 安装自身包和依赖包
+- `go build` 编译并安装自身包和依赖包
+- `go install` 安装自身包和依赖包
 
 ### 4.5 格式化代码
 
@@ -927,9 +923,9 @@ var (
 
 同一类型的多个变量可以声明在同一行，如：
 
- ```go
+```go
 var a, b, c int
- ```
+```
 
 多变量可以在同一行进行赋值，如：
 
@@ -1648,17 +1644,20 @@ Go语言的取地址符是&，放到一个变量前使用就会返回相应变�
 
 下面的代码片段可能输出An integer: 5, its location in memory: 0x6b0820（这个值随着每次运行程序而变化）。
 
+```go
    var i1 = 5
-
    fmt.Printf("An integer: %d, it's location in memory: %p\n",i1, &i1)
+```
 
-这个地址可以存储在一个叫做指针的特殊数据类型中，在本例中这是一个指向int的指针，即i1：此处使用*int 表示。如果想调用指针intP，可以这样声明它：
+这个地址可以存储在一个叫做指针的特殊数据类型中，在本例中这是一个指向int的指针，即i1：此处使用`*int`表示。如果想调用指针intP，可以这样声明它：
 
+```go
    var intP *int
+```
 
-然后使用intP = &i1是合法的，此时intP指向i1。
+然后使用`intP = &i1`是合法的，此时intP指向i1。
 
-指针的格式化标识符为%p。
+指针的格式化标识符为`%p`。
 
 intP存储了i1的内存地址；它指向了i1的位置，它引用了变量i1。
 
@@ -1672,7 +1671,7 @@ intP存储了i1的内存地址；它指向了i1的位置，它引用了变量i1�
 
 在书写表达式类似`var p *type`时，切记在`*`号和指针名称间留有一个空格，因为`- var ptype` 是语法正确的，但是在更复杂的表达式中，它容易被误认为是一个乘法表达式！
 
-Go语言和C、C++ 以及D语言这些低级（系统）语言一样，都有指针的概念。但是对于经常导致C语言内存泄漏继而程序崩溃的指针运算（所谓的指针算法，如：pointer+2，移动指针指向字符串的字节数或数组的某个位置）是不被允许的。Go语言中的指针保证了内存安全，更像是Java、C#和VB.NET 中的引用。
+Go语言和C、C++ 以及D语言这些低级（系统）语言一样，都有指针的概念。但是对于经常导致C语言内存泄漏继而程序崩溃的指针运算（所谓的指针算法，如：`pointer+2`，移动指针指向字符串的字节数或数组的某个位置）是不被允许的。Go语言中的指针保证了内存安全，更像是Java、C#和VB.NET 中的引用。
 
 因此`c = *p++ `在Go语言的代码中是不合法的。
 
@@ -1892,7 +1891,7 @@ func main() {
 
 由于本例的函数调用者属于main函数，程序会直接停止运行。
 
-####6.2.2 函数返回错误时终止程序运行
+#### 6.2.2 函数返回错误时终止程序运行
 
 如果想要在错误发生的同时终止程序的运行，可以使用os包的Exit函数：
 
@@ -1905,7 +1904,7 @@ if err != nil {
 
 有时候，会发现这种习惯用法被连续重复地使用在某段代码中。
 
-####6.2.3 函数没有返回错误的处理方法
+#### 6.2.3 函数没有返回错误的处理方法
 
 当没有错误发生时，代码继续运行就是唯一要做的事情，所以if语句块后面不需要使用else分支。
 
@@ -1920,7 +1919,7 @@ doSomething(f)  // 没有错误发生，文件对象被传入到某个函数中
 doSomething
 ```
 
-####6.2.4 将错误的获取放置在if语句的初始化部分
+#### 6.2.4 将错误的获取放置在if语句的初始化部分
 
 ```go
 if err := file.Chmod(0664); err !=nil {
@@ -1929,7 +1928,7 @@ if err := file.Chmod(0664); err !=nil {
 }
 ```
 
-####6.2.5 将ok-pattern的获取放置在if语句的初始化部分并进行判断
+#### 6.2.5 将ok-pattern的获取放置在if语句的初始化部分并进行判断
 
 ```go
 if value, ok := readData(); ok {
@@ -2021,7 +2020,7 @@ count, err := fmt.Println(x) // number of bytes printed, nil or 0, error
     }
 ```
 
-在case ...: 语句之后，不需要使用花括号将多行语句括起来，但可以在分支中进行任意形式的编码。当代码块只有一行时，可以直接放置在case语句之后。同样可以使用return语句来提前结束代码块的执行。当在switch语句块中使用return语句，并且函数是有返回值的，还需要在switch之后添加相应的return语句以确保函数始终会返回。
+在`case ...:`语句之后，不需要使用花括号将多行语句括起来，但可以在分支中进行任意形式的编码。当代码块只有一行时，可以直接放置在case语句之后。同样可以使用return语句来提前结束代码块的执行。当在switch语句块中使用return语句，并且函数是有返回值的，还需要在switch之后添加相应的return语句以确保函数始终会返回。
 
 可选的default分支可以出现在任何顺序，但最好将它放在最后。它的作用类似与if-else语句中的else，表示不符合任何已给出条件时，执行相关语句。
 
@@ -2046,7 +2045,7 @@ func main() {
 }
 ```
 
-####6.3.2 没有提供判断值的switch语句
+#### 6.3.2 没有提供判断值的switch语句
 
 switch语句的第二种形式是不提供任何被判断的值（实际上默认为判断是否为true），然后在每个case分支中进行测试不同的条件。当任一分支的测试结果为true时，该分支的代码会被执行。这看起来非常像链式的if-else语句，但是在测试条件非常多的情况下，提供了可读性更好的书写方式。
 
@@ -2099,7 +2098,7 @@ func main() {
 
 输出：Number is between 0 and 10
 
-####6.3.3 包含初始化语句的switch
+#### 6.3.3 包含初始化语句的switch
 
 switch语句的第三种形式是包含一个初始化语句：
 
@@ -2740,7 +2739,7 @@ function2: Deferred until the end of the calling function!
 * 程序说明
 在程序function1()返回前，执行function2()。
 
-####7.4.2 传递参数给defer任务
+#### 7.4.2 传递参数给defer任务
 
 * 程序示例
 
@@ -2778,7 +2777,7 @@ i=4 i=3 i=2 i=1 i=0
 
 当有多个defer行为被注册时，它们会以逆序执行。这种情况类似栈，即后进先出。
 
-####7.4.3 defer使用场景
+#### 7.4.3 defer使用场景
 
 关键字defer允许进行一些函数执行完成后的收尾工作，例如：
 
@@ -2813,7 +2812,7 @@ i=4 i=3 i=2 i=1 i=0
    defer disconnectFromDB()
 ```
 
-####7.4.4 使用defer任务实现代码追踪
+#### 7.4.4 使用defer任务实现代码追踪
 
 一个基础但十分实用的实现代码执行追踪的方案就是在进入和离开某个函数打印相关的消息，即可以提炼为下面两个函数：
 
@@ -2916,7 +2915,7 @@ func main() {
 }
 ```
 
-####7.4.5 使用defer语句来记录函数的参数和返回值
+#### 7.4.5 使用defer语句来记录函数的参数和返回值
 
 下面的代码展示了另一种在调试时使用defer语句的手法。
 
@@ -7881,9 +7880,10 @@ func main() {
 
 如果Bird 没有实现 Walk()（把它注释掉），会得到一个编译错误：
 
+```shell
    cannot use b (type *Bird) as type IDuck in function argument:
-
    *Bird does not implement IDuck (missing Walk method)
+```
 
 如果对 cat 调用函数 DuckDance()，Go 会提示编译错误，但是 Python 和 Ruby 会以运行时错误结束。
 
@@ -8011,7 +8011,7 @@ Go接口可以让开发者找出自己写的程序中的类型。假设有一些
 
 类型Bar必须实现ImplementsFooer方法来满足Footer接口，以清楚地记录这个事实。
 
-```
+```go
    type Bar struct{}
    func (b Bar) ImplementsFooer() {} func (b Bar) Foo() {}
 ```
@@ -8363,7 +8363,7 @@ func main() {
 
 注意： path 包里包含一个子包叫 filepath，这个子包提供了跨平台的函数，用于处理文件名和路径。例如 Base() 函数用于获得路径中的最后一个元素（不包含后面的分隔符）：
 
-```
+```go
    import "path/filepath"
    filename := filepath.Base(path)
 ```
@@ -8807,7 +8807,7 @@ func data(name string) string {
        defer f.Close() // idiomatic Go code!
        contents := io.ReadAll(f)
        return contents
-    }
+}
 ```
 
 在函数 return 后执行了f.Close()
@@ -8972,33 +8972,23 @@ json.Marshal()的函数签名是 func Marshal(v interface{}) ([]byte, error)，�
     }
 ```
 
-   出于安全考虑，在 web 应用中最好使用 json.MarshalforHTML() 函数，其对数据执行HTML转码，所以文本可以被安全地嵌在 HTML <script> 标签中。
+   出于安全考虑，在 web 应用中最好使用`json.MarshalforHTML()`函数，其对数据执行HTML转码，所以文本可以被安全地嵌在 HTML <script> 标签中。
 
 JSON与 Go 类型对应如下：
-
 - bool 对应 JSON 的 booleans
-
 - float64 对应 JSON 的 numbers
-
 - string 对应 JSON 的 strings
-
 - nil 对应 JSON 的 null
 
 不是所有的数据都可以编码为 JSON 类型：只有验证通过的数据结构才能被编码：
 
 - JSON 对象只支持字符串类型的key；要编码一个 Go map 类型，map 必须是 map[string]T（T是json 包中支持的任何类型）
-
 - Channel，复杂类型和函数类型不能被编码
-
 - 不支持循环数据结构；它将引起序列化进入一个无限循环
-
-- 指针可以被编码，实际上是对指针指向的值进行编码（或者指针是 nil）
-
- 
+- 指针可以被编码，实际上是对指针指向的值进行编码（或者指针是 nil） 
 
 反序列化：
-
-UnMarshal()的函数签名是 func Unmarshal(data []byte, v interface{}) error把 JSON 解码为数据结构。
+UnMarshal()的函数签名是 `func Unmarshal(data []byte, v interface{}) error把 JSON` 解码为数据结构。
 
 首先创建一个结构 Message 用来保存解码的数据：var m Message 并调用 Unmarshal()，解析 []byte 中的 JSON 数据并将结果存入指针 m 指向的值。
 
@@ -9007,19 +8997,22 @@ UnMarshal()的函数签名是 func Unmarshal(data []byte, v interface{}) error�
  
 解码任意的数据：
 
-json包使用 map[string]interface{} 和[]interface{} 储存任意的 JSON 对象和数组；其可以被反序列化为任何的 JSON blob 存储到接口值中。
+json包使用`map[string]interface{}`和`[]interface{}`储存任意的 JSON 对象和数组；其可以被反序列化为任何的 JSON blob 存储到接口值中。
 
 来看这个 JSON 数据，被存储在变量 b 中：
 
 ```go
 b== []byte({"Name": "Wednesday", "Age": 6,"Parents": ["Gomez", "Morticia"]})
 ```
+
 不用理解这个数据的结构，可以直接使用 Unmarshal 把这个数据编码并保存在接口值中：
+
 ```go
    var f interface{}
 
    err := json.Unmarshal(b, &f)
 ```
+
 f指向的值是一个 map，key 是一个字符串，value 是自身存储作为空接口类型的值：
 
 ```go
@@ -9119,8 +9112,6 @@ json包提供 Decoder 和 Encoder 类型来支持常用 JSON 数据流读写。N
 
 和 JSON 的方式一样，XML 数据可以序列化为结构，或者从结构反序列化为 XML 数据；这些可以在例子 15.8（twitter_status.go）中看到。
 
- 
-
 encoding/xml 包实现了一个简单的 XML 解析器（SAX），用来解析XML 数据内容。下面的例子说明如何使用解析器：
 
 示例xml.go：
@@ -9179,7 +9170,7 @@ XML文本被循环处理直到 Token() 返回一个错误，因为已经到达�
 
 Gob是 Go 自己的以二进制形式序列化和反序列化程序数据的格式；可以在 encoding 包中找到。这种格式的数据简称为 Gob （即 Go binary 的缩写）。类似于 Python 的 "pickle" 和 Java 的 "Serialization"。
 
-Gob通常用于远程方法调用（RPCs，参见 15.9 的 rpc 包）参数和结果的传输，以及应用程序和机器之间的数据传输。 它和 JSON 或 XML 有什么不同呢？Gob 特定地用于纯 Go 的环境中，例如，两个用 Go 写的服务之间的通信。这样的话服务可以被实现得更加高效和优化。 Gob 不是可外部定义，语言无关的编码方式。因此它的首选格式是二进制，而不是像JSON 和 XML 那样的文本格式。 Gob 并不是一种不同于 Go 的语言，而是在编码和解码过程中用到了 Go 的反射。
+Gob通常用于远程方法调用参数和结果的传输，以及应用程序和机器之间的数据传输。 它和 JSON 或 XML 有什么不同呢？Gob 特定地用于纯 Go 的环境中，例如，两个用 Go 写的服务之间的通信。这样的话服务可以被实现得更加高效和优化。 Gob 不是可外部定义，语言无关的编码方式。因此它的首选格式是二进制，而不是像JSON 和 XML 那样的文本格式。 Gob 并不是一种不同于 Go 的语言，而是在编码和解码过程中用到了 Go 的反射。
 
 Gob文件或流是完全自描述的：里面包含的所有类型都有一个对应的描述，并且总是可以用 Go 解码，而不需要了解文件的内容。
 
@@ -9254,8 +9245,9 @@ func main() {
 }
 
  // Output:  "Pythagoras": {3,4}
-```    
- 
+
+```
+
 
 示例 12.19 gob2.go 编码到文件：
 
@@ -9306,7 +9298,6 @@ func main() {
 通过网络传输的数据必须加密，以防止被 hacker（黑客）读取或篡改，并且保证发出的数据和收到的数据检验和一致。 鉴于 Go母公司的业务，毫不惊讶地看到 Go 的标准库为该领域提供了超过30 个的包：
 
 - hash 包：实现了adler32、crc32、crc64 和 fnv 校验；
-
 - crypto 包：实现了其它的hash 算法，比如 md4、md5、sha1 等。以及完整地实现了 aes、blowfish、rc4、rsa、xtea 等加密算法。
 
 下面的示例用 sha1 和 md5 计算并输出了一些校验值。
@@ -9482,7 +9473,7 @@ Go有一个预先定义的 error 接口类型
 
 如果有不同错误条件可能发生，那么对实际的错误使用类型断言或类型判断（type-switch）是很有用的，并且可以根据错误场景做一些补救和恢复操作。
 
- ```go
+```go
 
    //  err != nil
 
@@ -9592,16 +9583,16 @@ os包也提供了一套像 os.EINAL 这样的标准错误，它们基于syscall 
 panic可以直接从代码初始化：当错误条件（所测试的代码）很严苛且不可恢复，程序不能继续运行时，可以使用 panic 函数产生一个中止程序的运行时错误。panic 接收一个做任意类型的参数，通常是字符串，在程序死亡时被打印出来。Go 运行时负责中止程序并给出调试信息。在示例 13.2 panic.go 中阐明了它的工作方式：
 
 ```go
-   package main    
+package main    
 
-   import "fmt"    
+import "fmt"    
 
-   func main() {
-       fmt.Println("Starting the program")
-       panic("A severe error occurred: stopping the program!")
-       fmt.Println("Ending the program")
-    }
-```    
+func main() {
+    fmt.Println("Starting the program")
+    panic("A severe error occurred: stopping the program!")
+    fmt.Println("Ending the program")
+}
+```
 
 一个检查程序是否被已知用户启动的具体例子：
 
@@ -9782,7 +9773,7 @@ Go标准库中许多地方都用了这个机制，例如，json 包中的解码�
        return
 
     }
-```  
+```
 
 示例 13.5 panic_package.go：
 
@@ -9973,7 +9964,8 @@ exec包中也有同样功能的更简单的结构体和函数；主要是 exec.C
     }
 
    // in Windows: uitvoering: Error fork/exec /bin/ls: The system cannotfind the path specified. starting process!
-``` 
+```
+
 ### 14.7 Go 中的单元测试和基准测试
 
 首先所有的包都应该有一定的必要文档，然后同样重要的是对包的测试。
@@ -10052,7 +10044,6 @@ testing包中有一些类型和函数可以用来做简单的基准测试；测�
 示例even_main.go：
 
 ```go
-
    package main    
 
    import (
@@ -10065,7 +10056,7 @@ testing包中有一些类型和函数可以用来做简单的基准测试；测�
            fmt.Printf("Is the integer %d even? %v\n", i, even.Even(i))
        }
     }
- ```
+```
 
 上面使用了 even.go 中的even 包：
 
@@ -10289,8 +10280,6 @@ gopprof程序是 Google pprofC++ 分析器的一个轻微变种；关于此工�
 
 第 5 列表示函数的调用频度。
 
- 
-
 2）web 或 web 函数名
 该命令生成一份 SVG 格式的分析数据图表，并在网络浏览器中打开它（还有一个 gv 命令可以生成 PostScript 格式的数据，并在 GhostView 中打开，这个命令需要安装 graphviz）。函数被表示成不同的矩形（被调用越多，矩形越大），箭头指示函数调用链。
 
@@ -10341,7 +10330,9 @@ top5，list 函数名 等命令同样适用，只不过现在是以 Mb 为单位
 
 对于 web 应用来说，有标准的 HTTP 接口可以分析数据。在 HTTP 服务中添加
 
+```go
    import _ “http/pprof”
+```
 
 会为 /debug/pprof/ 下的一些 URL 安装处理器。然后可以用一个唯一的参数——服务中的分析数据的 URL 来执行 gopprof 命令——它会下载并执行在线分析。
 
@@ -10945,7 +10936,7 @@ i、xi都是作为参数传入闭合函数的，从外层循环中隐藏了变�
    type semaphore chan Empty
 ```
 
-​    将可用资源的数量N来初始化信号量 
+将可用资源的数量N来初始化信号量 
 
 ```go
   semaphore：sem = make(semaphore, N)
@@ -11281,8 +11272,6 @@ func main() {
     }
 }
 ```
-
-
 
 ### 15.3 协程同步：关闭通道-测试阻塞的通道
 
