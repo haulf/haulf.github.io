@@ -9246,6 +9246,2308 @@ Gob文件或流是完全自描述的：里面包含的所有类型都有一个�
 
 通过 io.WriteString 或 hasher.Write 计算给定字符串的校验值。
 
+## 14 错误处理与测试
+
+Go没有像 Java 和 .NET 那样的 try/catch 异常机制：不能执行抛异常操作。但是有一套defer-panic-and-recover 机制。
+
+Go的设计者觉得 try/catch 机制的使用太泛滥了，而且从底层向更高的层级抛异常太耗费资源。它们给 Go 设计的机制也可以 “捕捉” 异常，但是更轻量，并且只应该作为（处理错误的）最后的手段。
+
+Go是怎么处理普通错误的呢？通过在函数和方法中返回错误对象作为它们的唯一或最后一个返回值——如果返回 nil，则没有错误发生——并且主调（calling）函数总是应该检查收到的错误。
+
+永远不要忽略错误，否则可能会导致程序崩溃！！
+
+处理错误并且在函数发生错误的地方给用户返回错误信息：照这样处理就算真的出了问题，的程序也能继续运行并且通知给用户。panic and recover 是用来处理真正的异常（无法预测的错误）而不是普通的错误。
+
+库函数通常必须返回某种错误提示给主调（calling）函数。
+
+在前面的章节中了解了 Go 检查和报告错误条件的惯有方式：
+
+- 产生错误的函数会返回两个变量，一个值和一个错误码；如果后者是 nil 就是成功，非 nil 就是发生了错误。
+
+- 为了防止发生错误时正在执行的函数（如果有必要的话甚至会是整个程序）被中止，在调用函数后必须检查错误。
+
+   下面这段来自 pack1 包的代码 Func1 测试了它的返回值：
+   
+```go
+   if value, err := pack1.Func1(param1); err != nil {
+       fmt.Printf(“Error %s in pack1.Func1 withparameter %v”, 
+                  err.Error(), param1)
+       return    // or: return err
+   }
+
+   // Process(value)
+```
+
+为了更清晰的代码，应该总是使用包含错误值变量的 if 复合语句
+
+### 14.1 错误处理
+
+Go有一个预先定义的 error 接口类型
+
+```go
+   type error interface {
+       Error() string
+   }
+```
+
+错误值用来表示异常状态。errors 包中有一个 errorString 结构体实现了 error 接口。当程序处于错误状态时可以用 os.Exit(1) 来中止运行。
+
+#### 14.1.1 定义错误
+
+任何时候当需要一个新的错误类型，都可以用 errors（必须先 import）包的 errors.New 函数接收合适的错误信息来创建，像下面这样：
+
+```go
+   err := errors.New(“math - square root ofnegative number”)
+```
+
+示例errors.go：
+
+```go
+   // errors.go
+
+   package main    
+
+   import (
+       "errors"
+       "fmt"
+    )
+
+   var errNotFound error = errors.New("Not found error")
+
+   func main() {
+       fmt.Printf("error: %v", errNotFound)
+   }
+   // error: Not found error
+```
+
+可以把它用于计算平方根函数的参数测试：
+
+```go
+   func Sqrt(f float64) (float64, error) {
+       if f < 0 {
+           return 0, errors.New (“math - square root ofnegative number”)
+       }
+       // implementation of Sqrt
+  }
+```
+
+可以像下面这样调用 Sqrt 函数：
+
+```go
+   if f, err := Sqrt(-1); err != nil {
+       fmt.Printf(“Error: %s\n”,err)
+    }
+```
+
+由于 fmt.Printf 会自动调用 String() 方法 （参见 10.7 节），所以错误信息 “Error: math - square rootof negative number” 会打印出来。通常（错误信息）都会有像 “Error:” 这样的前缀，所以的错误信息不要以大写字母开头。
+
+在大部分情况下自定义错误结构类型很有意义的，可以包含除了（低层级的）错误信息以外的其它有用信息，例如，正在进行的操作（打开文件等），全路径或名字。看下面例子中 os.Open 操作触发的 PathError 错误：
+
+```go
+   // PathError records an error and the operation and file path thatcaused it.
+
+   type PathError struct {
+       Op string    // “open”, “unlink”, etc.
+       Path string  // The associatedfile.
+       Err error  // Returned by thesystem call.
+    }    
+
+   func (e *PathError) String() string {
+       return e.Op + “ ” + e.Path + “: “+ e.Err.Error()
+   }
+```
+
+如果有不同错误条件可能发生，那么对实际的错误使用类型断言或类型判断（type-switch）是很有用的，并且可以根据错误场景做一些补救和恢复操作。
+
+```go
+   //  err != nil
+
+   if e, ok := err.(*os.PathError); ok {
+       // remedy situation
+    }
+```
+
+或：
+
+```go
+   switch err := err.(type) {
+       case ParseError:
+           PrintParseError(err)
+       case PathError:
+           PrintPathError(err)
+       ...
+       default:
+           fmt.Printf(“Not a special error, just %s\n”, err)
+    }
+```
+
+作为第二个例子考虑用 json 包的情况。当 json.Decode 在解析 JSON 文档发生语法错误时，指定返回一个 SyntaxError 类型的错误：
+
+```go
+   type SyntaxError struct {
+       msg    string // description oferror
+   // error occurred after reading Offset bytes, from which line andcolumnnr can be obtained
+       Offset int64
+    }    
+
+   func (e *SyntaxError) String() string { return e.msg }
+```
+
+在调用代码中可以像这样用类型断言测试错误是不是上面的类型：
+
+```go
+   if serr, ok := err.(*json.SyntaxError); ok {
+       line, col := findLine(f, serr.Offset)
+       return fmt.Errorf(“%s:%d:%d: %v”, f.Name(), line, col, err)
+    }
+```
+
+包也可以用额外的方法（methods）定义特定的错误，比如 net.Errot：
+
+```go
+   package net
+
+   type Error interface {
+       Timeout() bool   // Is the error atimeout?
+       Temporary() bool // Is the error temporary?
+    }
+```
+
+正如所看到的一样，所有的例子都遵循同一种命名规范：错误类型以“Error” 结尾，错误变量以 “err” 或 “Err” 开头。
+
+syscall是低阶外部包，用来提供系统基本调用的原始接口。它们返回整数的错误码；类型 syscall.Errno 实现了 Error 接口。
+
+大部分 syscall 函数都返回一个结果和可能的错误，比如：
+
+```go
+   r, err := syscall.Open(name, mode, perm)
+   if err != 0 {
+       fmt.Println(err.Error())
+    }
+```
+
+os包也提供了一套像 os.EINAL 这样的标准错误，它们基于syscall 错误：
+
+```go
+   var (
+       EPERM        Error =Errno(syscall.EPERM)
+       ENOENT        Error =Errno(syscall.ENOENT)
+       ESRCH        Error =Errno(syscall.ESRCH)
+       EINTR        Error =Errno(syscall.EINTR)
+      EIO            Error =Errno(syscall.EIO)
+       ...
+    )
+```
+
+#### 14.1.2 用 fmt 创建错误对象
+
+通常想要返回包含错误参数的更有信息量的字符串，例如：可以用 fmt.Errorf() 来实现：它和 fmt.Printf() 完全一样，接收有一个或多个格式占位符的格式化字符串和相应数量的占位变量。和打印信息不同的是它用信息生成错误对象。
+
+比如在前面的平方根例子中使用：
+
+```go
+   if f < 0 {
+       return 0, fmt.Errorf(“math: square root ofnegative number %g”, f)
+    }
+```
+
+
+第二个例子：从命令行读取输入时，如果加了 help 标志，可以用有用的信息产生一个错误：
+
+```go
+   if len(os.Args) > 1 && (os.Args[1] == “-h” || os.Args[1] == “--help”) {
+       err = fmt.Errorf(“usage: %s infile.txtoutfile.txt”, filepath.Base(os.Args[0]))
+       return
+    }
+```
+
+### 14.2 运行时异常和 panic
+
+当发生像数组下标越界或类型断言失败这样的运行错误时，Go 运行时会触发运行时 panic，伴随着程序的崩溃抛出一个 runtime.Error 接口类型的值。这个错误值有个 RuntimeError()方法用于区别普通错误。
+
+panic可以直接从代码初始化：当错误条件（所测试的代码）很严苛且不可恢复，程序不能继续运行时，可以使用 panic 函数产生一个中止程序的运行时错误。panic 接收一个做任意类型的参数，通常是字符串，在程序死亡时被打印出来。Go 运行时负责中止程序并给出调试信息。在示例 13.2 panic.go 中阐明了它的工作方式：
+
+```go
+package main    
+
+import "fmt"    
+
+func main() {
+    fmt.Println("Starting the program")
+    panic("A severe error occurred: stopping the program!")
+    fmt.Println("Ending the program")
+}
+```
+
+一个检查程序是否被已知用户启动的具体例子：
+
+```go
+   var user = os.Getenv(“USER”)    
+
+   func check() {
+       if user == “” {
+           panic(“Unknown user: no value for $USER”)
+       }
+
+   }
+```
+
+可以在导入包的 init() 函数中检查这些。
+
+当发生错误必须中止程序时，panic 可以用于错误处理模式：
+
+```go
+   if err != nil {
+       panic(“ERROR occurred:”+ err.Error())
+   }
+```
+ 
+在多层嵌套的函数调用中调用 panic，可以马上中止当前函数的执行，所有的 defer 语句都会保证执行并把控制权交还给接收到 panic 的函数调用者。这样向上冒泡直到最顶层，并执行（每层的） defer，在栈顶处程序崩溃，并在命令行中用传给 panic 的值报告错误情况：这个终止过程就是 panicking。
+
+标准库中有许多包含 Must 前缀的函数，像 regexp.MustComplie 和 template.Must；当正则表达式或模板中转入的转换字符串导致错误时，这些函数会 panic。
+
+不能随意地用 panic 中止程序，必须尽力补救错误让程序能继续执行。
+
+### 14.3 从panic 中恢复（Recover）
+
+正如名字一样，这个（recover）内建函数被用于从 panic 或 错误场景中恢复：让程序可以从 panicking 重新获得控制权，停止终止过程进而恢复正常执行。
+
+recover只能在 defer 修饰的函数（参见 6.4 节）中使用：用于取得 panic 调用中传递过来的错误值，如果是正常执行，调用 recover 会返回 nil，且没有其它效果。
+
+总结：panic 会导致栈被展开直到 defer 修饰的 recover() 被调用或者程序中止。
+
+下面例子中的 protect 函数调用函数参数 g 来保护调用者防止从 g 中抛出的运行时 panic，并展示panic 中的信息：
+
+```go
+   func protect(g func()) {
+
+       defer func() {
+           log.Println(“done”)
+           // Println executes normally even if there is a panic
+           if err := recover(); err != nil {
+               log.Printf(“run time panic: %v”, err)
+           }
+       }()
+
+       log.Println(“start”)
+       g() //   possible runtime-error
+    }
+```
+
+这跟 Java 和 .NET 这样的语言中的catch 块类似。
+
+log包实现了简单的日志功能：默认的 log 对象向标准错误输出中写入并打印每条日志信息的日期和时间。除了 Println 和 Printf 函数，其它的致命性函数都会在写完日志信息后调用 os.Exit(1)，那些退出函数也是如此。而 Panic 效果的函数会在写完日志信息后调用 panic；可以在程序必须中止或发生了临界错误时使用它们，就像当 web 服务器不能启动时那样。
+
+log包用那些方法（methods）定义了一个 Logger 接口类型，如果想自定义日志系统的话可以参考（参见 http://golang.org/pkg/log/#Logger）。
+
+这是一个展示 panic，defer 和 recover怎么结合使用的完整例子：
+
+示例panic_recover.go：
+
+```go
+   // panic_recover.go
+
+   package main    
+
+   import (
+       "fmt"
+    )    
+
+   func badCall() {
+       panic("bad end")
+    }
+
+   func test() {
+       defer func() {
+           if e := recover(); e != nil {
+                fmt.Printf("Panicing%s\r\n", e)
+           }
+       }()
+
+       badCall()
+
+       fmt.Printf("After bad call\r\n") // <-- wordt niet bereikt
+    }    
+
+   func main() {
+       fmt.Printf("Calling test\r\n")
+       test()
+       fmt.Printf("Test completed\r\n")
+    }    
+```
+
+ defer-panic-recover在某种意义上也是一种像 if，for 这样的控制流机制。
+
+Go标准库中许多地方都用了这个机制，例如，json 包中的解码和regexp 包中的 Complie 函数。Go 库的原则是即使在包的内部使用了 panic，在它的对外接口（API）中也必须用 recover 处理成返回显式的错误。
+
+### 14.4 自定义包中的错误处理和 panicking
+
+这是所有自定义包实现者应该遵守的最佳实践：
+
+1）在包内部，总是应该从 panic 中 recover：不允许显式的超出包范围的 panic()
+
+2）向包的调用者返回错误值（而不是panic）。
+
+在包内部，特别是在非导出函数中有很深层次的嵌套调用时，对主调函数来说用 panic 来表示应该被翻译成错误的错误场景是很有用的（并且提高了代码可读性）。
+
+这在下面的代码中被很好地阐述了。有一个简单的 parse 包用来把输入的字符串解析为整数切片；这个包有自己特殊的ParseError。
+
+当没有东西需要转换或者转换成整数失败时，这个包会 panic（在函数 fields2numbers 中）。但是可导出的 Parse 函数会从 panic 中recover 并用所有这些信息返回一个错误给调用者。为了演示这个过程，在 panic_recover.go 中调用了 parse 包不可解析的字符串会导致错误并被打印出来。
+
+示例parse.go：
+
+```go
+   // parse.go
+
+   package parse
+
+   import (
+       "fmt"
+       "strings"
+       "strconv"
+    )
+    
+
+   // A ParseError indicates an error in converting a word into an integer.
+   type ParseError struct {
+       Index int      // The index intothe space-separated list of words.
+       Word  string   // The word that generated the parse error.
+       Err error // The raw error that precipitated this error, if any.
+    }
+    
+
+   // String returns a human-readable error message.
+   func (e *ParseError) String() string {
+      return fmt.Sprintf("pkg parse: error parsing %q as int",e.Word)
+   }
+    
+
+   // Parse parses the space-separated words in in put as integers.
+   func Parse(input string) (numbers []int, err error) {
+       defer func() {
+           if r := recover(); r != nil {
+                var ok bool
+                err, ok = r.(error)
+                if !ok {
+                    err = fmt.Errorf("pkg:%v", r)
+                }
+           }
+       }()    
+
+       fields := strings.Fields(input)
+       numbers = fields2numbers(fields)
+       return
+    }    
+
+   func fields2numbers(fields []string) (numbers []int) {
+       if len(fields) == 0 {
+           panic("no words to parse")
+       }
+
+       for idx, field := range fields {
+           num, err := strconv.Atoi(field)
+           if err != nil {
+                panic(&ParseError{idx,field, err})
+           }
+
+           numbers = append(numbers, num)
+       }
+       return
+
+    }
+```
+
+示例 13.5 panic_package.go：
+
+```go
+   // panic_package.go
+
+   package main
+
+
+   import (
+       "fmt"
+       "./parse/parse"
+    )    
+
+   func main() {
+       var examples = []string{
+                "1 2 3 4 5",
+                "100 50 25 12.56.25",
+               "2 + 2 = 4",
+                "1st class",
+                "",
+       }
+
+       for _, ex := range examples {
+           fmt.Printf("Parsing %q:\n ", ex)
+           nums, err := parse.Parse(ex)
+           if err != nil {
+                // here String() method fromParseError is used
+                fmt.Println(err) 
+                continue
+           }
+
+           fmt.Println(nums)
+       }
+    }
+```
+
+### 14.5 一种用闭包处理错误的模式
+
+每当函数返回时，应该检查是否有错误发生：但是这会导致重复乏味的代码。结合 defer/panic/recover 机制和闭包可以得到一个马上要讨论的更加优雅的模式。不过这个模式只有当所有的函数都是同一种签名时可用，这样就有相当大的限制。一个很好的使用它的例子是 web 应用，所有的处理函数都是下面这样：
+
+```go
+   func handler1(w http.ResponseWriter, r *http.Request) { ... }
+```
+
+假设所有的函数都有这样的签名：
+
+```go
+   func f(a type1, b type2)
+```
+
+参数的数量和类型是不相关的。
+
+给这个类型一个名字：
+
+```go
+   fType1 = func f(a type1, b type2)
+```
+
+在的模式中使用了两个帮助函数：
+
+1）check：这是用来检查是否有错误和 panic 发生的函数：
+
+```go
+   func check(err error) { if err != nil { panic(err) } }
+```
+
+2）errorhandler：这是一个包装函数。接收一个 fType1 类型的函数 fn 并返回一个调用 fn 的函数。里面就包含有 defer/recover 机制，这在 13.3 节中有相应描述。
+
+```go
+   func errorHandler(fn fType1) fType1 {
+       return func(a type1, b type2) {
+           defer func() {
+                if e, ok := recover().(error);ok {
+                    log.Printf(“run time panic: %v”, err)
+                }
+           }()
+           fn(a, b)
+       }
+    }
+```
+
+当错误发生时会 recover 并打印在日志中；除了简单的打印，应用也可以用 template 包为用户生成自定义的输出。check() 函数会在所有的被调函数中调用，像这样：
+
+```go
+   func f1(a type1, b type2) {
+       ...
+       f, _, err := // call function/method
+       check(err)
+       t, err := // call function/method
+       check(err)
+       _, err2 := // call function/method
+       check(err2)
+       ...
+    }
+```
+
+通过这种机制，所有的错误都会被 recover，并且调用函数后的错误检查代码也被简化为调用 check(err) 即可。在这种模式下，不同的错误处理必须对应不同的函数类型；它们（错误处理）可能被隐藏在错误处理包内部。可选的更加通用的方式是用一个空接口类型的切片作为参数和返回值。
+
+
+阅读下面的完整程序。不要执行它，写出程序的输出结果。然后编译执行并验证的预想。
+
+### 14.6 启动外部命令和程序
+
+os包有一个 StartProcess 函数可以调用或启动外部系统命令和二进制可执行文件；它的第一个参数是要运行的进程，第二个参数用来传递选项或参数，第三个参数是含有系统环境基本信息的结构体。
+
+这个函数返回被启动进程的 id（pid），或者启动失败返回错误。
+
+exec包中也有同样功能的更简单的结构体和函数；主要是 exec.Command(name string, arg...string) 和 Run()。首先需要用系统命令或可执行文件的名字创建一个 Command 对象，然后用这个对象作为接收者调用 Run()。下面的程序（因为是执行 Linux 命令，只能在 Linux 下面运行）演示了它们的使用：
+
+示例exec.go：
+
+```go
+   // exec.go
+
+   package main
+
+   import (
+       "fmt"
+       "os/exec"
+       "os"
+    )
+ 
+
+   func main() {
+
+   // 1) os.StartProcess //
+
+   /*********************/
+
+   /* Linux: */
+
+   env := os.Environ()
+   procAttr := &os.ProcAttr{
+                Env: env,
+                Files: []*os.File{
+                    os.Stdin,
+                    os.Stdout,
+                    os.Stderr,
+                },
+           }
+
+   // 1st example: list files
+
+   pid, err := os.StartProcess("/bin/ls",[]string{"ls", "-l"}, procAttr)  
+
+   if err != nil {
+           fmt.Printf("Error %v starting process!", err)  //
+           os.Exit(1)
+   }
+
+   fmt.Printf("The process id is %v", pid)
+
+   // 2nd example: show all processes
+
+   pid, err = os.StartProcess("/bin/ps", []string{"-e","-opid,ppid,comm"}, procAttr)  
+
+
+   if err != nil {
+           fmt.Printf("Error %v starting process!", err)  //
+           os.Exit(1)
+    }    
+
+   fmt.Printf("The process id is %v", pid)
+
+   // 2) exec.Run //
+
+   /***************/
+
+   // Linux:  OK, but not for ls ?
+   //no error, but doesn't show anything ?
+   // cmd := exec.Command("ls", "-l")  
+
+   //no error, but doesn't show anything ?
+
+   // cmd := exec.Command("ls")          
+
+       cmd := exec.Command("gedit") // this opens a gedit-window
+       err = cmd.Run()
+       if err != nil {
+           fmt.Printf("Error %v executing command!", err)
+           os.Exit(1)
+       }
+
+       fmt.Printf("The command is %v", cmd)
+    // The command is &{/bin/ls [ls -l][]  <nil> <nil> <nil>0xf840000210 <nil> true [0xf84000ea50 0xf84000e9f0 0xf84000e9c0][0xf84000ea50 0xf84000e9f0 0xf84000e9c0] [][] 0xf8400128c0}
+
+    }
+
+   // in Windows: uitvoering: Error fork/exec /bin/ls: The system cannotfind the path specified. starting process!
+```
+
+### 14.7 Go 中的单元测试和基准测试
+
+首先所有的包都应该有一定的必要文档，然后同样重要的是对包的测试。
+
+Go的测试工具 gotest。
+
+名为 testing 的包被专门用来进行自动化测试，日志和错误报告。并且还包含一些基准测试函数的功能。
+
+备注：gotest 是 Unix bash 脚本，所以在 Windows 下需要配置 MINGW 环境；在 Windows 环境下把所有的 pkg/linux_amd64 替换成 pkg/windows。
+
+对一个包做（单元）测试，需要写一些可以频繁（每次更新后）执行的小块测试单元来检查代码的正确性。于是必须写一些 Go 源文件来测试代码。测试程序必须属于被测试的包，并且文件名满足这种形式*_test.go，所以测试代码和包中的业务代码是分开的。
+
+`_test`程序不会被普通的 Go 编译器编译，所以当放应用部署到生产环境时它们不会被部署；只有 gotest 会编译所有的程序：普通程序和测试程序。
+
+测试文件中必须导入 "testing" 包，并写一些名字以 TestZzz 打头的全局函数，这里的 Zzz 是被测试函数的字母描述，如 TestFmtInterface，TestPayEmployees 等。
+
+测试函数必须有这种形式的头部：
+
+```go
+   func TestAbcde(t *testing.T)
+```
+
+T是传给测试函数的结构类型，用来管理测试状态，支持格式化测试日志，如 t.Log，t.Error，t.ErrorF 等。在函数的结尾把输出跟想要的结果对比，如果不等就打印一个错误。成功的测试则直接返回。
+
+用下面这些函数来通知测试失败：
+
+1）func (t *T)Fail()
+
+标记测试函数为失败，然后继续执行（剩下的测试）。
+
+2）func (t *T)FailNow()
+
+标记测试函数为失败并中止执行；文件中别的测试也被略过，继续执行下一个文件。
+
+3）func (t *T)Log(args ...interface{})
+
+args 被用默认的格式格式化并打印到错误日志中。
+
+4）func (t *T)Fatal(args ...interface{})
+
+结合 先执行 3），然后执行 2）的效果。
+
+运行 go test 来编译测试程序，并执行程序中所有的 TestZZZ 函数。如果所有的测试都通过会打印出 PASS。
+
+gotest可以接收一个或多个函数程序作为参数，并指定一些选项。
+
+结合 --chatty 或 -v 选项，每个执行的测试函数以及测试状态会被打印。
+
+例如：
+
+```go
+   go test fmt_test.go --chatty
+   === RUN fmt.TestFlagParser
+   --- PASS: fmt.TestFlagParser
+   === RUN fmt.TestArrayPrinter
+   --- PASS: fmt.TestArrayPrinter
+   ...
+```
+
+testing包中有一些类型和函数可以用来做简单的基准测试；测试代码中必须包含以 `BenchmarkZzz` 打头的函数并接收一个 `*testing.B` 类型的参数，比如：
+
+```go
+   func BenchmarkReverse(b *testing.B) {
+       ...
+
+   }
+```
+
+命令 go test –test.bench=.* 会运行所有的基准测试函数；代码中的函数会被调用 N 次（N是非常大的数，如 N =1000000），并展示 N 的值和函数执行的平均时间，单位为ns（纳秒，ns/op）。如果是用testing.Benchmark 调用这些函数，直接运行程序即可。
+
+### 14.8 测试的具体例子
+
+写了一个叫 main_oddeven.go 的程序用来测试前 100 个整数是否是偶数。这个函数属于 even 包。
+
+下面是一种可能的方案：
+示例even_main.go：
+
+```go
+   package main    
+
+   import (
+       "fmt"
+       "even/even"
+    )    
+
+   func main() {
+       for i:=0; i<=100; i++ {
+           fmt.Printf("Is the integer %d even? %v\n", i, even.Even(i))
+       }
+    }
+```
+
+上面使用了 even.go 中的even 包：
+
+示例even/even.go：
+
+```go
+   package even    
+
+   func Even(i int) bool {        //Exported function
+       return i%2 == 0
+   }    
+
+   func Odd(i int) bool {        //Exported function
+       return i%2 != 0
+   }
+```
+
+在 even 包的路径下，创建一个名为 oddeven_test.go 的测试程序：
+
+示例even/oddeven_test.go：
+
+```go
+   package even    
+
+   import "testing"    
+
+   func TestEven(t *testing.T) {
+       if !Even(10) {
+           t.Log(" 10 must be even!")
+           t.Fail()
+       }
+
+       if Even(7) {
+           t.Log(" 7 is not even!")
+           t.Fail()
+       }    
+
+    }    
+
+   func TestOdd(t *testing.T) {
+       if !Odd(11) {
+           t.Log(" 11 must be odd!")
+           t.Fail()
+       }
+       if Odd(10) {
+           t.Log(" 10 is not odd!")
+           t.Fail()
+       }
+
+    }
+```
+
+由于测试需要具体的输入用例且不可能测试到所有的用例（非常像一个无穷的数），所以必须对要使用的测试用例思考再三。
+
+至少应该包括：
+
+- 正常的用例
+
+- 反面的用例（错误的输入，如用负数或字母代替数字，没有输入等）
+
+- 边界检查用例（如果参数的取值范围是0 到 1000，检查 0 和 1000 的情况）
+
+可以直接执行 go install 安装 even 或者创建一个 以下内容的 Makefile：
+
+```makefile
+   include $(GOROOT)/src/Make.inc
+
+   TARG=even
+
+   GOFILES=\
+          even.go\
+
+   include $(GOROOT)/src/Make.pkg
+```
+
+然后执行 make（或 gomake）命令来构建归档文件 even.a
+
+测试代码不能在 GOFILES 参数中引用，因为不希望生成的程序中有测试代码。如果包含了测试代码，gotest 会给出错误提示！go test 会生成一个单独的包含测试代码的 _test 程序。
+
+现在可以用命令：go test（或 make test）来测试 even 包。
+
+因为示例中的测试函数不会调用 t.Log 和 t.Fail，所以会得到一个 PASS 的结果。在这个简单例子中一切都正常执行。
+
+为了看到失败时的输出，把函数 TestEven 改为：
+
+```go
+   func TestEven(t *testing.T) {
+       if Even(10) {
+           t.Log(“Everything OK: 10 is even, just a test tosee failed 
+                                                        output!”)
+           t.Fail()
+        }
+    }
+```
+
+现在会调用 t.Log 和 t.Fail，得到的结果如下：
+
+```go
+   --- FAIL: even.TestEven (0.00 seconds)
+
+   Everything OK: 10 is even, just a test to see failed output!
+
+   FAIL
+```
+
+### 14.9 用（测试数据）表驱动测试
+
+编写测试代码时，一个较好的办法是把测试的输入数据和期望的结果写在一起组成一个数据表：表中的每条记录都是一个含有输入和期望值的完整测试用例，有时还可以结合像测试名字这样的额外信息来让测试输出更多的信息。
+
+实际测试时简单迭代表中的每条记录，并执行必要的测试。
+
+可以抽象为下面的代码段：
+
+```go
+   var tests = []struct{     // Testtable
+       in string
+       out string    
+
+   }{
+       {“in1”, “exp1”},
+       {“in2”, “exp2”},
+       {“in3”, “exp3”},
+   ...
+  } 
+
+   func TestFunction(t *testing.T) {
+       for i, tt := range tests {
+           s := FuncToBeTested(tt.in)
+           if s != tt.out {
+                t.Errorf(“%d. %q => %q, wanted: %q”, i, tt.in, s,tt.out)
+           }
+       }
+   }
+```
+
+如果大部分函数都可以写成这种形式，那么写一个帮助函数 verify 对实际测试会很有帮助：
+
+```go
+   func verify(t *testing.T, testnum int, testcase, input, output, expectedstring) {
+       if input != output {
+           t.Errorf(“%d. %s with input = %s: output %s !=%s”, testnum, testcase, input, output, expected)
+       }
+    }
+```
+
+   TestFunction则变为：
+
+```go
+   func TestFunction(t *testing.T) {
+       for i, tt := range tests {
+           s := FuncToBeTested(tt.in)
+           verify(t, i, “FuncToBeTested: “, tt.in, s, tt.out)
+       }
+   }
+```
+
+### 14.10 性能调试：分析并优化 Go 程序
+#### 14.10.1 时间和内存消耗
+
+可以用这个便捷脚本 xtime 来测量：
+
+```shell
+   #!/bin/sh
+
+   /usr/bin/time -f ‘%Uu %Ss %er %MkB %C’ “$@”
+```
+
+在Unix 命令行中像这样使用 xtime goprogexec，这里的 progexec 是一个 Go 可执行程序，这句命令行输出类似：56.63u 0.26s 56.92r 1642640kB progexec，分别对应用户时间，系统时间，实际时间和最大内存占用。
+
+#### 14.10.2 用 go test 调试
+
+如果代码使用了 Go 中 testing 包的基准测试功能，可以用 gotest 标准的 -cpuprofile 和 -memprofile 标志向指定文件写入 CPU 或 内存使用情况报告。
+
+使用方式：go test -x -v -cpuprofile=prof.out -file x_test.go
+
+编译执行 x_test.go 中的测试，并向 prof.out 文件中写入 cpu 性能分析信息。
+
+#### 14.10.3 用 pprof 调试
+
+可以在单机程序 progexec 中引入 runtime/pprof 包；这个包以 pprof 可视化工具需要的格式写入运行时报告数据。对于 CPU 性能分析来说需要添加一些代码：
+
+```go
+   var cpuprofile = flag.String(“cpuprofile”, “”, “write cpuprofile to file”)
+
+   func main() {
+       flag.Parse()
+       if *cpuprofile != “” {
+           f, err := os.Create(*cpuprofile)
+           if err != nil {
+                log.Fatal(err)
+           }
+
+           pprof.StartCPUProfile(f)
+           defer pprof.StopCPUProfile()
+       }
+   ...
+```
+
+代码定义了一个名为 cpuprofile 的 flag，调用 Go flag 库来解析命令行 flag，如果命令行设置了 cpuprofile flag，则开始 CPU 性能分析并把结果重定向到那个文件。（os.Create 用拿到的名字创建了用来写入分析数据的文件）。这个分析程序最后需要在程序退出之前调用 StopCPUProfile 来刷新挂起的写操作到文件中；用 defer 来保证这一切会在 main 返回时触发。
+
+
+现在用这个 flag 运行程序：progexec-cpuprofile=progexec.prof
+
+然后可以像这样用 gopprof 工具：gopprof progexec progexec.prof
+
+gopprof程序是 Google pprofC++ 分析器的一个轻微变种；关于此工具更多的信息，参见http://code.google.com/p/google-perftools/。
+
+如果开启了 CPU 性能分析，Go 程序会以大约每秒 100 次的频率阻塞，并记录当前执行的 goroutine 栈上的程序计数器样本。
+
+此工具一些有趣的命令：
+
+1）topN
+用来展示分析结果中最开头的 N 份样本，例如：top5 它会展示在程序运行期间调用最频繁的 5 个函数，输出如下：
+
+```shell
+   Total: 3099 samples
+   626 20.2% 20.2% 626 20.2% scanblock
+   309 10.0% 30.2% 2839 91.6% main.FindLoops
+   ...
+```
+
+第 5 列表示函数的调用频度。
+
+2）web 或 web 函数名
+该命令生成一份 SVG 格式的分析数据图表，并在网络浏览器中打开它（还有一个 gv 命令可以生成 PostScript 格式的数据，并在 GhostView 中打开，这个命令需要安装 graphviz）。函数被表示成不同的矩形（被调用越多，矩形越大），箭头指示函数调用链。
+
+3）list 函数名 或 weblist 函数名
+
+展示对应函数名的代码行列表，第 2 列表示当前行执行消耗的时间，这样就很好地指出了运行过程中消耗最大的代码。
+
+如果发现函数 runtime.mallocgc（分配内存并执行周期性的垃圾回收）调用频繁，那么是应该进行内存分析的时候了。找出垃圾回收频繁执行的原因，和内存大量分配的根源。
+
+为了做到这一点必须在合适的地方添加下面的代码：
+
+```go
+   var memprofile = flag.String(“memprofile”, “”, “write memoryprofile to this file”)
+   ...
+
+   CallToFunctionWhichAllocatesLotsOfMemory()
+   if *memprofile != “” {
+       f, err := os.Create(*memprofile)
+       if err != nil {
+           log.Fatal(err)
+       }
+       pprof.WriteHeapProfile(f)
+       f.Close()
+      return
+    }
+```
+
+用 -memprofile flag 运行这个程序：progexec-memprofile=progexec.mprof
+
+然后可以像这样再次使用 gopprof 工具：gopprof progexec progexec.mprof
+
+top5，list 函数名 等命令同样适用，只不过现在是以 Mb 为单位测量内存分配情况，这是 top 命令输出的例子：
+
+```shell
+   Total: 118.3 MB
+       66.1 55.8% 55.8% 103.7 87.7% main.FindLoops
+       30.5 25.8% 81.6% 30.5 25.8% main.*LSG·NewLoop
+       ...
+```
+
+从第 1 列可以看出，最上面的函数占用了最多的内存。
+
+同样有一个报告内存分配计数的有趣工具：
+
+```shell
+   gopprof --inuse_objects progexec progexec.mprof
+```
+
+对于 web 应用来说，有标准的 HTTP 接口可以分析数据。在 HTTP 服务中添加
+
+```go
+   import _ “http/pprof”
+```
+
+会为 /debug/pprof/ 下的一些 URL 安装处理器。然后可以用一个唯一的参数——服务中的分析数据的 URL 来执行 gopprof 命令——它会下载并执行在线分析。
+
+```shell
+   gopprof http://localhost:6060/debug/pprof/profile # 30-second CPUprofile
+
+   gopprof http://localhost:6060/debug/pprof/heap # heap profile
+```
+
+
+## 15 协程与通道
+
+作为一门21世纪的语言，Go原生支持应用之间的通信和程序的并发。程序可以在不同的处理器和计算机上同时执行不同的代码段。Go语言为构建并发程序的基本代码块是 协程(goroutine)与通道(channel)。它们需要语言、编译器和runtime的支持。Go语言提供的垃圾回收器对并发编程至关重要。
+
+不要通过共享内存来通信，而通过通信来共享内存。
+
+通信强制协作。
+
+### 15.1 并发、并行和协程
+
+#### 15.1.1 什么是协程
+
+一个应用程序是运行在机器上的一个进程。进程是一个运行在自己内存地址空间里的独立执行体。一个进程由一个或多个操作系统线程组成，这些线程其实是共享同一个内存地址空间的一起工作的执行体。几乎所有"正式"的程序都是多线程的，以便让用户或计算机不必等待，或者能够同时服务多个请求（如Web服务器），或增加性能和吞吐量（例如，通过对不同的数据集并行执行代码）。一个并发程序可以在一个处理器或者内核上使用多个线程来执行任务，但是只有在同一个程序在某一个时间点在多个些处理内核或处理器上同时执行的任务才是真正的并行。
+
+并行是一种通过使用多处理器以提高速度的能力。所以并发程序可以是并行的，也可以不是。
+
+公认的，使用多线程的应用难以做到准确，最主要的问题是内存中的数据共享，它们会被多线程以无法预知的方式进行操作，导致一些无法重现或者随机的结果（称作竞态）。
+
+不要使用全局变量或者共享内存，它们会给代码在并发运算的时候带来危险。解决之道在于同步不同的线程，对数据加锁，这样同时就只有一个线程可以变更数据。在Go 的标准库sync中有一些工具用来在低级别的代码中实现加锁。不过过去的软件开发经验告诉这会带来更高的复杂度，更容易使代码出错以及更低的性能，所以这个经典的方法明显不再适合现代多核/多处理器编程：thread-per-connection模型不够有效。
+
+Go更倾向于其它的方式，在诸多比较合适的范式中，有个被称作Communicating SequentialProcesses（顺序通信处理），还有一个叫做 message passing-model（消息传递）（已经运用在了其它语言中，比如Eralng）。
+
+在Go中，应用程序并发处理的部分被称作goroutines（协程），它可以进行更有效的并发运算。在协程和操作系统线程之间并无一对一的关系：协程是根据一个或多个线程的可用性，映射（多路复用，执行于）在它们之上的；协程调度器在Go运行时很好的完成了这个工作。
+
+协程工作在相同的地址空间中，所以共享内存的方式一定是同步的；这个可以使用sync包来实现，不过很不鼓励这样做：Go使用channels来同步协程。
+
+当系统调用（比如等待I/O）阻塞协程时，其它协程会继续在其它线程上工作。协程的设计隐藏了许多线程创建和管理方面的复杂工作。
+
+协程是轻量的，比线程更轻。它们痕迹非常不明显（使用少量的内存和资源）：使用4K的栈内存就可以在堆中创建它们。因为创建非常廉价，必要的时候可以轻松创建并运行大量的协程（在同一个一个地址空间中100,000个连续的协程）。并且它们对栈进行了分割，从而动态的增加（或缩减）内存的使用；栈的管理是自动的，但不是由垃圾回收器管理的，而是在协程退出后自动释放。
+
+协程可以运行在多个操作系统线程之间，也可以运行在线程之内，让可以很小的内存占用就可以处理大量的任务。由于操作系统线程上的协程时间片，可以使用少量的操作系统线程就能拥有任意多个提供服务的协程，而且Go运行时可以聪明的意识到哪些协程被阻塞了，暂时搁置它们并处理其它协程。
+
+存在两种并发方式：确定性的（明确定义排序）和非确定性的（加锁/互斥从而未定义排序）。Go的协程和通道理所当然的支持确定性的并发方式（例如通道具有一个 sender和一个receiver）。
+
+协程是通过使用关键字go调用（执行）一个函数或者方法来实现的（也可以是匿名或者lambda函数）。这样会在当前的计算过程中开始一个同时进行的函数，在相同的地址空间中并且分配了独立的栈，比如：go sum(bigArray)，在后台计算总和。
+
+协程的栈会根据需要进行伸缩，不出现栈溢出；开发者不需要关心栈的大小。当协程结束的时候，它会静默退出：用来启动这个协程的函数不会得到任何的返回值。
+
+任何Go程序都必须有的main()函数也可以看做是一个协程，尽管它并没有通过go来启动。协程可以在程序初始化的过程中运行（在init()函数中）。
+
+在一个协程中，比如它需要进行非常密集的运算，可以在运算循环中周期的使用runtime.Gosched()：这会让出处理器，允许运行其它协程；它并不会使当前协程挂起，所以它会自动恢复执行。使用Gosched()可以使计算均匀分布，使通信不至于迟迟得不到响应。
+
+#### 15.1.2 并发和并行的差异
+
+Go的并发原语提供了良好的并发设计基础：表达程序结构以便表示独立地执行的动作；所以Go的的重点不在于并行的首要位置：并发程序可能是并行的，也可能不是。并行是一种通过使用多处理器以提高速度的能力。但往往是，一个设计良好的并发程序在并行方面的表现也非常出色。
+
+在2012年1月的运行时实现中，Go默认没有并行指令，只有一个独立的核心或处理器被专门用于Go程序，不论它启动了多少个协程；所以这些协程是并发运行的，但它们不是并行运行的：同一时间只有一个协程会处在运行状态。
+
+这个情况在以后可能会发生改变，不过届时，为了使的程序可以使用多个核心运行，这时协程就真正的是并行运行了，必须使用GOMAXPROCS变量。这会告诉运行时有多少个协程同时执行。
+
+并且只有gc编译器真正实现了协程，适当的把协程映射到操作系统线程。使用gccgo编译器，会为每一个协程创建操作系统线程。
+
+#### 15.1.3 使用GOMAXPROCS
+
+在gc编译器下（6g或者8g）必须设置GOMAXPROCS为一个大于默认值1的数值来允许运行时支持使用多于1个的操作系统线程，所有的协程都会共享同一个线程除非将 GOMAXPROCS设置为一个大于1的数。当GOMAXPROCS大于1时，会有一个线程池管理许多的线程。通过gccgo编译器GOMAXPROCS有效的与运行中的协程数量相等。假设n是机器上处理器或者核心的数量。如果设置环境变量GOMAXPROCS>=n，或者执行runtime.GOMAXPROCS(n)，接下来协程会被分割（分散）到n个处理器上。更多的处理器并不意味着性能的线性提升。有这样一个经验法则，对于n个核心的情况设置GOMAXPROCS为n-1以获得最佳性能，也同样需要遵守这条规则：协程的数量 > 1 + GOMAXPROCS > 1。
+
+所以如果在某一时间只有一个协程在执行，不要设置GOMAXPROCS！
+
+还有一些通过实验观察到的现象：在一台1颗CPU的笔记本电脑上，增加GOMAXPROCS到9会带来性能提升。在一台32核的机器上，设置GOMAXPROCS=8会达到最好的性能，在测试环境中，更高的数值无法提升性能。如果设置一个很大的GOMAXPROCS只会带来轻微的性能下降；设置GOMAXPROCS=100，使用top命令和H选项查看到只有7个活动的线程。
+
+增加GOMAXPROCS的数值对程序进行并发计算是有好处的；
+
+总结：GOMAXPROCS等同于（并发的）线程数量，在一台核心数多于1个的机器上，会尽可能有等同于核心数的线程在并行运行。
+
+#### 15.1.4 如何用命令行指定使用的核心数量
+
+使用 flags 包，如下：
+
+```go
+var numCores = flag.Int("n", 2, "number of CPU cores touse")
+```
+
+在main()方法中，
+
+```go
+flag.Parse()
+runtime.GOMAXPROCS(*numCores)
+```
+
+协程可以通过调用runtime.Goexit()来停止，尽管这样做几乎没有必要。
+
+- **程序示例**
+
+```go
+// @file:        goroutine1.go
+// @version:     1.0
+// @author:      haulf
+// @date:        2017.11.07
+// @go version:  1.9
+// @brief:       Goroutine test.
+
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    fmt.Println("In main()")
+    go longWait()
+    go shortWait()
+    fmt.Println("About to sleep in main()")
+    // sleep works with a Duration in nanoseconds (ns) !
+    time.Sleep(10 * 1e9)
+    fmt.Println("At the end of main()")
+}
+
+func longWait() {
+    fmt.Println("Beginning longWait()")
+    time.Sleep(5 * 1e9) // sleep for 5 seconds
+    fmt.Println("End of longWait()")
+}
+
+func shortWait() {
+    fmt.Println("Beginning shortWait()")
+    time.Sleep(2 * 1e9) // sleep for 2 seconds
+    fmt.Println("End of shortWait()")
+}
+```
+
+- **程序运行结果**
+
+```shell
+In main()
+About to sleep in main()
+Beginning shortWait()
+Beginning longWait()
+End of shortWait()
+End of longWait()
+At the end of main()
+```
+
+重新运行一次：
+
+```shell
+In main()
+About to sleep in main()
+Beginning longWait()
+Beginning shortWait()
+End of shortWait()
+End of longWait()
+At the end of main()
+```
+
+- **程序说明**
+
+main()、longWait() 和shortWait()三个函数作为独立的处理单元启动后开始并行运行。每一个函数都在运行的开始和结束阶段输出了消息。为了模拟它们运算的时间消耗，使用了time包中的Sleep函数。Sleep()可以按照指定的时间来暂停函数或协程地执行，这里使用了纳秒（ns，符号1e9表示1乘10的9次方，e=指数）。
+
+让main()函数暂停10秒从而确定它会在另外两个协程之后结束。如果不这样（如果让main()函数停止4 秒），main()会提前结束，longWait()则无法完成。如果不在main()中等待，协程会随着程序的结束而消亡。
+
+当main()函数返回的时候，程序退出，它不会等待任何其它非main协程的结束。这就是为什么在服务器程序中，每一个请求都会启动一个协程来处理，server()函数必须保持运行状态。通常使用一个无限循环来达到这样的目的。
+
+另外，协程是独立的处理单元，一旦陆续启动一些协程，无法确定它们是什么时候真正开始执行的。从上面的运行结果来看，不能确longWait()和shortWait()哪一个先开始执行。
+
+为了对比使用一个线程，连续调用的情况，移除go关键字，重新运行程序。
+
+协程更有用的一个例子应该是在一个非常长的数组中查找一个元素。将数组分割为若干个不重复的切片，然后给每一个切片启动一个协程进行查找计算。这样许多并行的线程可以用来进行查找任务，整体的查找时间会缩短（除以协程的数量）。
+
+#### 15.1.5 Go协程（goroutines）和其它语言协程（coroutines）
+
+在其它语言中，比如在C#，Lua或者Python里都有协程的概念。这个名字表明它和Go协程有些相似，不过有两点不同：
+
+- Go协程意味着并行（或者可以以并行的方式部署），其它语言中的协程一般来说不是这样的。
+- Go协程通过通道来通信；其它语言中的协程通过让出和恢复操作来通信
+
+Go协程比其它语言中的协程更强大，也很容易从其它语言中协程的逻辑复用到Go协程。
+
+### 15.2 协程间的信道
+
+#### 15.2.1 概念
+
+在上面的例子中，协程是独立执行的，它们之间没有通信。它们必须通信才会变得更有用：彼此之间发送和接收信息并且协调/同步它们的工作。协程可以使用共享变量来通信，但是很不提倡这样做，因为这种方式给所有的共享内存的多线程都带来了困难。
+
+Go有一个特殊的类型，通道（channel），可以通过它们发送类型化的数据在协程之间通信，可以避开所有内存共享导致的坑。通道的通信方式保证了同步性。数据通过通道，同一时间只有一个协程可以访问数据，所以不会出现数据竞争。数据的归属（可以读写数据的能力）被传递。
+
+工厂的传送带是个很有用的例子。一个机器（生产者协程）在传送带上放置物品，另外一个机器（消费者协程）拿到物品并打包。
+
+通道服务于通信的两个目的：值的交换，同步的，保证了两个计算（协程）任何时候都是可知状态。
+
+通常使用这样的格式来声明通道：
+
+```go
+var identifier chan datatype
+```
+
+未初始化的通道的值是nil。
+
+通道只能传输一种类型的数据，比如chan int 或者chan string，所有的类型都可以用于通道，空接口interface{}也可以，甚至可以创建通道的通道。
+
+通道实际上是类型化消息的队列：使数据得以传输。它是先进先出（FIFO）结构，所以可以保证发送给它们的元素的顺序。通道也是引用类型，可以使用make()函数来给它分配内存。这里先声明了一个字符串通道ch1，然后创建了它（实例化）：
+
+```go
+   var ch1 chan string
+   ch1 = make(chan string)
+```
+
+当然可以更短： 
+
+```go
+ch1 := make(chan string)
+```
+
+这里构建一个int通道的通道： 
+
+```go
+chanOfChans := make(chan chan int)
+```
+
+或者函数通道：
+
+```go
+funcChan := chan func()。
+```
+
+所以通道是对象的第一类型：可以存储在变量中，作为函数的参数传递，从函数返回以及通过通道发送它们自身。另外它们是类型化的，允许类型检查，比如尝试使用整数通道发送一个指针。
+
+#### 15.2.2 通信操作符<-
+
+这个操作符直观的标示了数据的传输：信息按照箭头的方向流动。
+
+- 对象进入通道（发送）
+
+`ch <- int1` 表示：用通道ch发送变量int1(把变量int1放入到通道ch中进行发送)
+
+- 从通道中取出数据（接收），三种方式：
+
+`int2 = <- ch` 表示：从通道ch中取出新的值赋给变量int2，这里是假设int2已经声明过了。如果没有的话可以写成：int2 := <- ch。
+
+`<- ch` 可以单独调用获取通道的下一个值，当前值会被丢弃，但是可以用来验证，所以以下代码是合法的：
+
+```go
+   if <- ch != 1000{
+       ...
+    }
+```
+
+操作符` <-`也被用来发送和接收，Go 尽管不必要，为了可读性，通道的命名通常以ch开头或者包含chan。通道的发送和接收操作都是自动的：它们通常一气呵成。下面的示例展示了通信操作。
+
+
+
+- **程序示例**
+
+```go
+// @file:        goroutine2.go
+// @version:     1.0
+// @author:      haulf
+// @date:        2017.11.08
+// @go version:  1.9
+// @brief:       Goroutine test.
+
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    ch := make(chan string)
+    go sendData(ch)
+    go getData(ch)
+    time.Sleep(1e9)
+}
+
+func sendData(ch chan string) {
+    ch <- "Washington"
+    ch <- "Tripoli"
+    ch <- "London"
+    ch <- "Beijing"
+    ch <- "Tokio"
+}
+
+func getData(ch chan string) {
+    var input string
+    // time.Sleep(1e9)
+    for {
+        input = <-ch
+        fmt.Printf("%s ", input)
+    }
+}
+```
+
+- **程序运行结果**
+
+```shell
+Washington Tripoli London Beijing Tokio %
+
+```
+
+- **程序说明**
+
+main()函数中启动了两个协程：sendData()通过通道ch发送了5个字符串，getData()按顺序接收它们并打印出来。
+
+如果两个协程之间需要通信，必须给它们同一个通道作为参数。
+
+如果注释掉main()函数中的time.Sleep(1e9)，则没有数据打印出来。
+
+发现协程之间的同步非常重要：
+
+- main()等待了1秒让两个协程完成，如果不这样，sendData()发送的数据就没有机会输出。
+
+- getData()使用了无限循环，它随着sendData()的发送完成和ch变空也结束了。
+
+- 如果移除一个或所有go关键字，程序无法运行，Go运行时会抛出panic：
+
+```shell
+Washington Tripoli London Beijing Tokio fatal error: all goroutines are asleep - deadlock!
+
+goroutine 1 [chan receive]:
+main.getData(0xc42006c060)
+    /Users/aihaofeng/Documents/go_v20171107/study_manal/goroutine/goroutine2.go:34 +0x4e
+main.main()
+    /Users/aihaofeng/Documents/go_v20171107/study_manal/goroutine/goroutine2.go:18 +0x66
+```
+
+为什么会这样？运行时会检查所有的协程是否在等待（可以读取或者写入某个通道），意味着程序无法处理，这是死锁（deadlock）形式。不要使用打印状态来表明通道的发送和接收顺序，因为由于打印状态和通道实际发生读写的时间延迟会导致和真实发生的顺序不同。
+
+#### 15.2.3 通道阻塞
+
+默认情况下，通信是同步且无缓冲的，在有接受者接收数据之前，发送不会结束。可以想象一个无缓冲的通道在没有空间来保存数据的时候，必须要一个接收者准备好接收通道的数据然后发送者可以直接把数据发送给接收者，所以通道的发送/接收操作在对方准备好之前是阻塞的。
+
+1）对于同一个通道，发送操作（协程或者函数中的），在接收者准备好之前是阻塞的。如果通道中的数据无人接收，就无法再给通道传入其它数据，新的输入无法在通道非空的情况下传入，所以发送操作会等待通道再次变为可用状态，就是通道值被接收时。
+
+2）对于同一个通道，接收操作是阻塞的（协程或函数中的），直到发送者可用。如果通道中没有数据，接收者就阻塞了。
+
+- **程序示例**
+
+```go
+// @file:        channel_block.go
+// @version:     1.0
+// @author:      haulf
+// @date:        2017.11.08
+// @go version:  1.9
+// @brief:       Goroutine test.
+
+package main
+
+import "fmt"
+
+func main() {
+    ch1 := make(chan int)
+    go pump(ch1)       // pump hangs
+    fmt.Println(<-ch1) // prints only 0
+}
+
+func pump(ch chan int) {
+    for i := 0; ; i++ {
+        ch <- i
+    }
+}
+```
+
+
+
+- **程序运行结果**
+
+0
+
+
+
+- **程序说明**
+
+在上面的程序中，一个协程在无限循环中给通道发送整数数据。不过因为没有接收者，只输出了一个数字0。pump()函数为通道提供数值，也被叫做生产者。
+
+为通道解除阻塞，定义了suck()函数来在无限循环中读取通道。
+
+- **程序示例**
+
+```go
+// @file:        channel_block.go
+// @version:     1.0
+// @author:      haulf
+// @date:        2017.11.08
+// @go version:  1.9
+// @brief:       Goroutine test.
+
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    ch1 := make(chan int)
+    go pump(ch1) // pump hangs
+    go suck(ch1)
+    time.Sleep(1e9)
+    fmt.Println(<-ch1) // prints only 0
+}
+
+func pump(ch chan int) {
+    for i := 0; ; i++ {
+        ch <- i
+    }
+}
+
+func suck(ch chan int) {
+    for {
+        fmt.Println(<-ch)
+    }
+}
+```
+
+- **程序运行结果**
+
+```shell
+....
+220758
+220759
+220760
+220761
+220762
+220764
+220763
+```
+
+- **程序说明**
+
+给程序1秒的时间来运行，这期间输出了上万个整数。
+
+
+
+#### 15.2.4 通过一个或多个通道交换数据进行协程同步
+
+通信是一种同步形式。通过通道，两个协程在通信中某刻同步交换数据。无缓冲通道成为了多个协程同步的完美工具。甚至可以在通道两端互相阻塞对方，形成了叫做死锁的状态。Go运行时会检查并panic，停止程序。死锁几乎完全是由糟糕的设计导致的。无缓冲通道会被阻塞。设计无阻塞的程序可以避免这种情况，或者使用带缓冲的通道。
+
+blocking.go
+
+解释为什么下边这个程序会导致panic：所有的协程都休眠了 - 死锁！
+
+```go
+   package main   
+
+   import (
+       "fmt"
+    )
+    
+
+   func f1(in chan int) {
+       fmt.Println(<-in)
+    }
+    
+
+   func main() {
+       out := make(chan int)
+       out <- 2
+       go f1(out)
+    }
+```
+
+上面程序中的out是一个无缓冲的通道。只有一个发送协程，即只有生产者，没有消费者，因此会出现阻塞，这就是列死锁情况。
+
+
+
+#### 15.2.5 同步通道-使用带缓冲的通道
+
+一个无缓冲通道只能包含1个元素，有时显得很局限。给通道提供了一个缓存，可以在扩展的make命令中设置它的容量，如下：
+
+```go
+buf := 100
+ch1 := make(chan string, buf)  // buf是通道可以同时容纳的元素（这里是string）个数
+```
+
+在缓冲被全部使用之前，给一个带缓冲的通道发送数据是不会阻塞的，而从通道读取数据也不会阻塞，直到缓冲空了。缓冲容量和类型无关，可以给一些通道设置不同的容量，只要它们拥有同样的元素类型。内置的cap函数可以返回缓冲区的容量。如果容量大于0，通道就是异步的了：缓冲满载（发送）或变空（接收）之前通信不会阻塞，元素会按照发送的顺序被接收。如果容量是0或者未设置容量，通信仅在收发双方准备好的情况下才可以成功。
+
+```go
+ch := make(chan type, value)
+- value == 0 // synchronous, unbuffered(阻塞）
+- value > 0  // asynchronous, buffered（非阻塞）取决于value元素
+```
+
+#### 15.2.6 在协程中用通道输出结果
+
+为了知道计算何时完成，可以通过信道回报。
+
+```go
+   ch := make(chan int)
+   go sum(bigArray, ch) // bigArray puts the calculated sum on ch
+   // .. do something else for a while
+   sum := <- ch // wait for, and retrieve the sum
+```
+
+也可以使用通道来达到同步的目的，这个很有效的用法在传统计算机中称为信号量（semaphore）。或者换个方式，通过通道发送信号告知处理已经完成。在其它协程运行时让main程序无限阻塞的通常做法是在main函数的最后放置一个{}，也可以使用通道让main程序等待协程完成，就是所谓的信号量模式。
+
+#### 15.2.7 信号量模式
+
+下边的代码片段中，协程通过在通道ch中放置一个值来处理结束的信号。main协程等待<-ch直到从中获取到值。
+
+期望从这个通道中获取返回的结果，像这样：
+
+```go
+   func compute(ch chan int){
+       // when it completes, signal on the channel.
+       ch <- someComputation() 
+    }
+
+   func main(){
+       ch := make(chan int)         // allocate a channel.
+       go compute(ch)               // stat something in a goroutines
+       doSomethingElseForAWhile()
+       result := <- ch
+    }
+```
+
+这个信号也可以是其它的，不返回结果，比如下面这个协程中的匿名函数（lambda）协程：
+
+```go
+   ch := make(chan int)
+
+   go func(){
+       // doSomething
+       ch <- 1 // Send a signal; value does not matter
+    }
+
+   doSomethingElseForAWhile()
+   <- ch    // Wait for goroutineto finish; discard sent value.
+```
+
+或者等待两个协程完成，每一个都会对切片s的一部分进行排序，片段如下：
+
+```go
+   done := make(chan bool)
+
+   // doSort is a lambda function, so a closure which knows the channel done:
+   doSort := func(s []int){
+       sort(s)
+       done <- true
+    }
+
+    i:= pivot(s)
+
+   go doSort(s[:i])
+   go doSort(s[i:])
+   <-done
+   <-done
+```
+
+下边的代码用完整的信号量模式对长度为N的float64切片进行了N个doSomething()计算并同时完成，通道sem分配了相同的长度（包含空接口类型的元素），等待所有的计算都完成后，发送信号（通过放入值）。在循环中从通道sem不停的取出数据来等待所有的协程完成。
+
+```go
+   type Empty interface {}
+   var empty Empty
+   ...
+   data := make([]float64, N)
+   res := make([]float64, N)
+
+   sem := make(chan Empty, N)
+   ...
+   for i, xi := range data {
+       go func (i int, xi float64) {
+           res[i] = doSomething(i, xi)
+           sem <- empty
+       } (i, xi)
+    }
+
+   // wait for goroutines to finish
+   for i := 0; i < N; i++ { <-sem }
+```
+
+i、xi都是作为参数传入闭合函数的，从外层循环中隐藏了变量i和xi。让每个协程有一份i和xi的拷贝；另外，for循环的下一次迭代会更新所有协程中i和xi的值。切片 res没有传入闭合函数，因为协程不需要单独拷贝一份。切片res也在闭合函数中但并不是参数。
+
+#### 15.2.8 实现并行的for循环
+
+在之前的代码片段中，for循环的每一个迭代是并行完成的：
+
+```go
+   for i, v := range data {
+       go func (i int, v float64) {
+           doSomething(i, v)
+           ...
+       } (i, v)
+    }
+```
+
+在for循环中并行计算迭代可能带来很好的性能提升。不过所有的迭代都必须是独立完成的。
+
+#### 15.2.9 用带缓冲通道实现一个信号量
+
+信号量是实现互斥锁常见的同步机制，它限制对资源的访问，解决读写问题。比如没有实现信号量的sync的Go包，使用带缓冲的通道可以轻松实现：
+
+- 带缓冲通道的容量和要同步的资源容量相同。
+- 通道的长度（当前存放的元素个数）与当前资源被使用的数量相同。
+- 容量减去通道的长度就是未处理的资源个数（标准信号量的整数值）。
+
+不用管通道中存放的是什么，只关注长度。因此创建了一个长度可变但容量为0（字节）的通道：
+
+```go
+   type Empty interface {}
+   type semaphore chan Empty
+```
+
+将可用资源的数量N来初始化信号量 
+
+```go
+  semaphore：sem = make(semaphore, N)
+```
+
+然后直接对信号量进行操作：
+
+```go
+   // acquire n resources
+   func (s semaphore) P(n int) {
+       e := new(Empty)
+
+       for i := 0; i < n; i++ {
+           s <- e
+       }
+    }    
+
+   // release n resouces
+   func (s semaphore) V(n int) {
+       for i:= 0; i < n; i++{
+           <- s
+       }
+    }
+```
+
+可以用来实现一个互斥的例子：
+
+```go
+   /* mutexes */
+   func (s semaphore) Lock() {
+       s.P(1)
+    }
+
+   func (s semaphore) Unlock(){
+       s.V(1)
+    }
+    
+   /* signal-wait */
+   func (s semaphore) Wait(n int) {
+       s.P(n)
+    }   
+
+   func (s semaphore) Signal() {
+       s.V(1)
+    }
+```
+
+
+
+**习惯用法：通道工厂模式**
+
+编程中常见的另外一种模式如下：不将通道作为参数传递给协程，而用函数来生成一个通道并返回（工厂角色）；函数内有个匿名函数被协程调用。
+
+channel_idiom.go：
+
+```go
+   package main
+
+   import (
+       "fmt"
+       "time"
+    )   
+
+   func main() {
+       stream := pump()
+       go suck(stream)
+       time.Sleep(1e9)
+    }   
+
+   func pump() chan int {
+       ch := make(chan int)
+
+       go func() {
+           for i := 0; ; i++ {
+                ch <- i
+           }
+       }()
+
+       return ch
+    }
+
+   func suck(ch chan int) {
+       for {
+           fmt.Println(<-ch)
+       }
+    }
+```
+
+#### 15.2.10 给通道使用for循环
+
+for循环的range语句可以用在通道ch上，便可以从通道中获取值，像这样：
+
+```go
+   for v := range ch {
+       fmt.Printf("The value is %v\n", v)
+   }
+```
+
+它从指定通道中读取数据直到通道关闭，才继续执行下边的代码。很明显，另外一个协程必须写入数据ch（不然代码就阻塞在for循环了），而且必须在写入完成后才关闭。suck函数可以这样写，且在协程中调用这个动作，程序变成了这样：
+
+示例channel_idiom2.go：
+
+```go
+   package main
+
+   import (
+       "fmt"
+       "time"
+    )
+
+   func main() {
+       suck(pump())
+       time.Sleep(1e9)
+    } 
+
+   func pump() chan int {
+       ch := make(chan int)
+
+       go func() {
+           for i := 0; ; i++ {
+                ch <- i
+           }
+       }()
+       return ch
+    }
+
+   func suck(ch chan int) {
+       go func() {
+           for v := range ch {
+                fmt.Println(v)
+           }
+       }()
+    }
+```
+
+**习惯用法：通道迭代模式**
+
+这个模式用到了前边示例中的模式，通常，需要从包含了地址索引字段items的容器给通道填入元素。为容器的类型定义一个方法Iter()，返回一个只读的通道items，如下：
+
+```go
+   func (c *container) Iter () <- chan items {
+       ch := make(chan item)
+
+       go func () {
+           for i:= 0; i < c.Len(); i++ {   // or use a for-range loop
+                ch <- c.items[i]
+           }
+       } ()
+
+       return ch
+    }
+```
+
+在协程里，一个for循环迭代容器c中的元素（对于树或图的算法，这种简单的for循环可以替换为深度优先搜索）。
+
+调用这个方法的代码可以这样迭代容器：
+
+```go
+   for x := range container.Iter() { ... }
+```
+
+可以运行在自己的协程中，所以上边的迭代用到了一个通道和两个协程（可能运行在两个线程上）。就有了一个特殊的生产者-消费者模式。如果程序在协程给通道写完值之前结束，协程不会被回收；设计如此。这种行为看起来是错误的，但是通道是一种线程安全的通信。在这种情况下，协程尝试写入一个通道，而这个通道永远不会被读取，这可能是个bug而并非期望它被静默的回收。
+
+
+**习惯用法：生产者消费者模式**
+
+假设有Produce()函数来产生Consume函数需要的值。它们都可以运行在独立的协程中，生产者在通道中放入给消费者读取的值。整个处理过程可以替换为无限循环：
+
+```go
+   for {
+       Consume(Produce())
+    }
+```
+
+#### 15.2.11 通道的方向
+
+通道类型可以用注解来表示它只发送或者只接收：
+
+```go
+   var send_only chan<- int        // channel can only receive data
+   var recv_only <-chan int       // channel can onley send data
+```
+
+只接收的通道（<-chan T）无法关闭，因为关闭通道是发送者用来表示不再给通道发送值了，所以对只接收通道是没有意义的。通道创建的时候都是双向的，但也可以分配有方向的通道变量，就像以下代码：
+
+```go
+   var c = make(chan int) // bidirectional
+
+   go source(c)
+   go sink(c)   
+
+   func source(ch chan<- int){
+       for { ch <- 1 }
+   }    
+
+   func sink(ch <-chan int) {
+       for { <-ch }
+   }
+```
+
+
+**习惯用法：管道和选择器模式**
+
+更具体的例子还有协程处理它从通道接收的数据并发送给输出通道：
+
+```go
+   sendChan := make(chan int)
+   reciveChan := make(chan string)
+   go processChannel(sendChan, receiveChan)
+
+   func processChannel(in <-chan int, out chan<- string) {
+       for inValue := range in {
+           result := ... /// processing inValue
+           out <- result
+       }
+   }
+```
+
+通过使用方向注解来限制协程对通道的操作。
+
+这里有一个例子，打印了输出的素数，使用选择器作为它的算法。每个 prime 都有一个选择器。
+ 
+版本1：示例14.7-sieve1.go
+
+```go
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.package main
+
+package main
+
+import "fmt"
+
+// Send the sequence 2, 3, 4, ... to channel 'ch'.
+func generate(ch chan int) {
+    for i := 2; ; i++ {
+        ch <- i // Send 'i' to channel 'ch'.
+    }
+}
+
+// Copy the values from channel 'in' to channel 'out',
+// removing those divisible by 'prime'.
+func filter(in, out chan int, prime int) {
+    for {
+        i := <-in // Receive value of new variable 'i' from 'in'.
+        if i%prime != 0 {
+            out <- i // Send 'i' tochannel 'out'.
+        }
+    }
+}
+
+// The prime sieve: Daisy-chain filter processes together.
+func main() {
+    ch := make(chan int) // Create a new channel.
+    go generate(ch)      // Startgenerate() as a goroutine.
+    for {
+        prime := <-ch
+        fmt.Print(prime, " ")
+        ch1 := make(chan int)
+        go filter(ch, ch1, prime)
+        ch = ch1
+    }
+}
+```
+
+协程 filter(in, out chan int, prime int) 拷贝整数到输出通道，丢弃掉可以被prime整除的数字，然后每个prime又开启了一个新的协程，生成器和选择器并发请求。
+
+第二个版本引入了上边的习惯用法：函数sieve、generate和filter都是工厂；它们创建通道并返回，而且使用了协程的lambda函数。main函数现在短小清晰：它调用 sieve() 返回了包含素数的通道，然后通过 fmt.Println(<-primes) 打印出来。
+
+
+版本2：示例sieve2.go
+
+```go
+// Copyright 2009 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package main
+
+import (
+    "fmt"
+)
+
+// Send the sequence 2, 3, 4, ... to returned channel
+func generate() chan int {
+    ch := make(chan int)
+
+    go func() {
+        for i := 2; ; i++ {
+            ch <- i
+        }
+    }()
+
+    return ch
+}
+
+// Filter out input values divisible by 'prime', send rest to returnedchannel
+func filter(in chan int, prime int) chan int {
+    out := make(chan int)
+
+    go func() {
+        for {
+            if i := <-in; i%prime != 0 {
+                out <- i
+            }
+        }
+    }()
+
+    return out
+}
+
+func sieve() chan int {
+    out := make(chan int)
+
+    go func() {
+        ch := generate()
+
+        for {
+            prime := <-ch
+            ch = filter(ch, prime)
+            out <- prime
+        }
+    }()
+
+    return out
+}
+
+func main() {
+    primes := sieve()
+
+    for {
+        fmt.Println(<-primes)
+    }
+}
+```
+
+### 15.3 协程同步：关闭通道-测试阻塞的通道
+
+通道可以被显示的关闭。它们和文件不同，不必每次都关闭。只有在当需要告诉接收者不会再提供新值的时候，才需要关闭通道。发送者需要关闭通道，接收者不会需要。
+
+继续看示例goroutine2.go：
+
+(1) 如何在通道的sendData()完成的时候发送一个信号?
+
+(2) getData()又如何检测到通道是否关闭或阻塞？
+
+第一个可以通过函数close(ch)来完成：这个将通道标记为无法通过发送操作<-接受更多的值；给已经关闭的通道发送或者再次关闭都会导致运行时的panic。在创建一个通道后使用defer语句是个不错的办法（类似这种情况）：
+
+```go
+   ch := make(chan float64)
+   defer close(ch)
+```
+
+第二个问题可以使用逗号，ok操作符来检测通道是否被关闭。
+
+如何来检测可以收到没有被阻塞（或者通道没有被关闭）？
+
+```go
+   v, ok := <-ch   // ok is trueif v received value
+```
+
+通常和 if 语句一起使用：
+
+```go
+   if v, ok := <-ch; ok {
+       process(v)
+   }
+```
+
+或者在for循环中接收的时候，当关闭或者阻塞的时候使用break：
+
+```go
+   v, ok := <-ch
+
+   if !ok {
+       break
+   }
+
+   process(v)
+```
+
+可以通过 _ = ch <- v 来实现非阻塞发送，因为空标识符获取到了发送给ch的任何东西。在示例程序中使用这些可以改进为版本goroutine3.go，输出相同。
+
+实现非阻塞通道的读取，需要使用select。
+
+示例goroutine3.go：
+
+```go
+   package main
+
+   import "fmt"
+
+ 
+   func main() {
+       ch := make(chan string)
+       go sendData(ch)
+       getData(ch)
+   }
+
+    
+   func sendData(ch chan string) {
+       ch <- "Washington"
+       ch <- "Tripoli"
+       ch <- "London"
+       ch <- "Beijing"
+       ch <- "Tokio"
+       close(ch)
+    }
+
+   func getData(ch chan string) {
+       for {
+           input, open := <-ch
+           if !open {
+                break
+           }
+
+           fmt.Printf("%s ", input)
+       }
+    }
+```
+
+改变了以下代码：
+
+- 现在只有sendData()是协程，getData()和main()在同一个线程中：
+   go sendData(ch)
+   getData(ch)
+
+- 在sendData()函数的最后，通过close(ch)关闭了通道。
+
+- 在for循环的getData()中，在每次接收通道的数据之前都使用if !open来检测。使用for-range语句来读取通道是更好的办法，因为这会自动检测通道是否关闭：
+
+```go
+   for input := range ch {
+       process(input)
+   }
+```
+
+**阻塞和生产者-消费者模式：**
+
+在之前的通道迭代器中，两个协程经常是一个阻塞另外一个。如果程序工作在多核心的机器上，大部分时间只用到了一个处理器。可以通过使用带缓冲（缓冲空间大于0）的通道来改善。比如，缓冲大小为100，迭代器在阻塞之前，至少可以从容器获得100个元素。如果消费者协程在独立的内核运行，就有可能让协程不会出现阻塞。
+
+由于容器中元素的数量通常是已知的，需要让通道有足够的容量放置所有的元素。这样，迭代器就不会阻塞（尽管消费者协程仍然可能阻塞）。然后，这样有效的加倍了迭代容器所需要的内存使用量，所以通道的容量需要限制一下最大值。记录运行时间和性能测试可以帮助找到最小的缓存容量带来最好的性能。
+
+### 15.4 使用select切换协程
+
+从不同的并发执行的协程中获取值可以通过关键字select来完成，它和switch控制语句非常相似也被称作通信开关；它的行为像是“准备好了吗”的轮询机制；select监听进入通道的数据，也可以是用通道发送值的时候。
+
+```go
+   select {
+   case u:= <- ch1:
+           ...
+   case v:= <- ch2:
+           ...
+           ...
+   default: // no value ready to be received
+           ...
+   }
+```
+
+default语句是可选的；fallthrough行为，和普通的switch相似，是不允许的。在任何一个case中执行break或者return，select就结束了。
+
+select做的就是：选择处理列出的多个通信情况中的一个。
+
+- 如果都阻塞了，会等待直到其中一个可以处理。
+
+- 如果多个可以处理，随机选择一个。
+
+- 如果没有通道操作可以处理并且写了default语句，它就会执行：default永远是可运行的（这就是准备好了，可以执行）。
+
+在select中使用发送操作并且有default可以确保发送不被阻塞！如果没有case，select就会一直阻塞。
+
+elect语句实现了一种监听模式，通常用在（无限）循环中；在某种情况下，通过break语句使循环退出。
+
+在程序goroutine_select.go中有2个通道 ch1和ch2，三个协程pump1()、pump2()和suck()。这是一个典型的生产者消费者模式。在无限循环中，ch1和ch2通过 pump1()和pump2()填充整数；suck()也是在无限循环中轮询输入的，通过select语句获取ch1和ch2的整数并输出。选择哪一个case取决于哪一个通道收到了信息。程序在 main执行1秒后结束。
+
+示例goroutine_select.go：
+
+```go
+   package main
+
+   import (
+       "fmt"
+       "time"
+    )
+
+   func main() {
+       ch1 := make(chan int)
+       ch2 := make(chan int)
+
+       go pump1(ch1)
+       go pump2(ch2)
+       go suck(ch1, ch2)
+       time.Sleep(1e9)
+    }  
+
+   func pump1(ch chan int) {
+       for i := 0; ; i++ {
+           ch <- i * 2
+       }
+    } 
+
+   func pump2(ch chan int) {
+       for i := 0; ; i++ {
+           ch <- i + 5
+       }
+    }
+
+   func suck(ch1, ch2 chan int) {
+       for {
+           select {
+           case v := <-ch1:
+                fmt.Printf("Received onchannel 1: %d\n", v)
+           case v := <-ch2:
+                fmt.Printf("Received onchannel 2: %d\n", v)
+           }
+       }
+   }
+```
+一秒内的输出非常惊人，如果给它计数（goroutine_select2.go），得到了90000个左右的数字。
+
+
+**习惯用法：后台服务模式**
+
+服务通常是是用后台协程中的无限循环实现的，在循环中使用select获取并处理通道中的数据：
+
+```go
+   // Backend goroutine.
+   func backend() {
+       for {
+         select {
+           case cmd := <-ch1:
+               // Handle ...
+           case cmd := <-ch2:
+                ...
+           case cmd := <-chStop:
+                // stop server
+           }
+       }
+    }
+```
+
+在程序的其它地方给通道 ch1，ch2 发送数据，比如：通道stop用来清理结束服务程序。
+
+另一种方式（但是不太灵活）就是（客户端）在chRequest上提交请求，后台协程循环这个通道，使用switch根据请求的行为来分别处理。
+
+### 15.5 通道、超时和计时器（Ticker）
+
+time包中有一些有趣的功能可以和通道组合使用。其中就包含了 time.Ticker 结构体，这个对象以指定的时间间隔重复的向通道 C 发送时间值：
+
+```go
+   type Ticker struct {
+       C <-chan Time // the channel on which the ticks are delivered.
+       // contains filtered or unexported fields
+       ...
+    }
+```
+
+时间间隔的单位是ns（纳秒，int64），在工厂函数time.NewTicker中以Duration类型的参数传入：func Newticker(dur) *Ticker。
+
+在协程周期性的执行一些事情（打印状态日志，输出，计算等等）的时候非常有用。
+
+调用Stop()使计时器停止，在defer语句中使用。这些都很好的适应select语句:
+
+```go
+   ticker := time.NewTicker(updateInterval)
+   defer ticker.Stop()
+   ...
+   select {
+   case u:= <-ch1:
+       ...
+   case v:= <-ch2:
+       ...
+   case <-ticker.C:
+       logState(status) // call some logging function logState
+   default: // no value ready to be received
+       ...
+   }
+```
+
+`time.Tick()`函数声明为`Tick(d Duration) <-chan Time`，当想返回一个通道而不必关闭它的时候这个函数非常有用：它以d为周期给返回的通道发送时间，d是纳秒数。如果需要像下边的代码一样，限制处理频率（函数`client.Call()`是一个RPC调用，这里暂不赘述：
+
+```go
+   import "time"   
+
+   rate_per_sec := 10
+   var dur Duration = 1e9 / rate_per_sec
+   chRate := time.Tick(dur) // a tick every 1/10th of a second
+
+   for req := range requests {
+       <- chRate // rate limit our Service.Method RPC calls
+       go client.Call("Service.Method", req, ...)
+   }
+```
+
+这样只会按照指定频率处理请求：chRate阻塞了更高的频率。每秒处理的频率可以根据机器负载（和/或）资源的情况而增加或减少。
+
+定时器（Timer）结构体看上去和计时器（Ticker）结构体的确很像（构造为NewTimer(d Duration)），但是它只发送一次时间，在Drationd之后。
+
+还有time.After(d) 函数，声明如下：
+
+```go
+  func After(d Duration) <-chan Time
+```
+
+在Duration d之后，当前时间被发到返回的通道；所以它和NewTimer(d).C是等价的；它类似Tick()，但是After()只发送一次时间。下边有个很具体的示例，很好的阐明了select中default的作用：
+
+示例timer_goroutine.go：
+
+```go
+   package main
+
+    
+
+   import (
+
+       "fmt"
+
+       "time"
+
+    )
+
+    
+
+   func main() {
+       tick := time.Tick(1e8)
+       boom := time.After(5e8)
+
+       for {
+           select {
+           case <-tick:
+                fmt.Println("tick.")
+           case <-boom:
+                fmt.Println("BOOM!")
+                return
+           default:
+                fmt.Println("    .")
+                time.Sleep(5e7)
+           }
+       }
+    }
+```
+
+
+**习惯用法：简单超时模式**
+
+要从通道ch中接收数据，但是最多等待1秒。先创建一个信号通道，然后启动一个lambda协程，协程在给通道发送数据之前是休眠的：
+
+```go
+   timeout := make(chan bool, 1)
+
+   go func() {
+           time.Sleep(1e9) // one second
+           timeout <- true
+   }()
+```
+
+然后使用select语句接收ch或者timeout的数据：如果ch在1秒内没有收到数据，就选择到了time分支并放弃了ch的读取。
+
+
+第二种形式：取消耗时很长的同步调用
+
+也可以使用time.After()函数替换 timeout-channel。可以在select中使用以发送信号超时或停止协程的执行。以下代码，在 timeoutNs纳秒后执行 select 的 timeout 分支时，client.Call 不会给通道 ch 返回值：
+
+```go
+   ch := make(chan error, 1)
+
+   go func() { ch <- client.Call("Service.Method", args,&reply) } ()
+
+   select {
+   case resp := <-ch
+      // use resp and reply
+
+   case <-time.After(timeoutNs):
+       // call timed out
+       break
+   }
+```
+
+注意缓冲大小设置为1是必要的，可以避免协程死锁以及确保超时的通道可以被垃圾回收。
+
+第三种形式：假设程序从多个复制的数据库同时读取。只需要一个答案，需要接收首先到达的答案，Query函数获取数据库的连接切片并请求。并行请求每一个数据库并返回收到的第一个响应：
+
+```go
+    func Query(conns []conn, query string) Result {
+        ch := make(chan Result, 1)
+        for _, conn := range conns {
+            go func(c Conn) {
+                select {
+                case ch <- c.DoQuery(query):
+                default:
+                }
+            }(conn)
+        }
+        return <- ch
+    }
+```
+
+再次声明，结果通道ch必须是带缓冲的：以保证第一个发送进来的数据有地方可以存放，确保放入的首个数据总会成功，所以第一个到达的值会被获取而与执行的顺序无关。正在执行的协程可以总是可以使用runtime.Goexit()来停止。
+ 
+
+**在应用中缓存数据：**
+
+应用程序中用到了来自数据库（或者常见的数据存储）的数据时，经常会把数据缓存到内存中，因为从数据库中获取数据的操作代价很高；如果数据库中的值不发生变化就没有问题。但是如果值有变化，需要一个机制来周期性的从数据库重新读取这些值：缓存的值就不可用（过期）了，而且也不希望用户看到陈旧的数据。
+
+### 15.6 协程和恢复（recover）
+
+一个用到recover的程序停掉了服务器内部一个失败的协程而不影响其它协程的工作。
+
+```go
+func server(workChan <-chan *Work) {
+    for work := range workChan {
+        go safelyDo(work)   // start the goroutine for that work
+    }
+}
+
+func safelyDo(work *Work) {
+    defer func {
+        if err := recover(); err != nil {
+            log.Printf("Work failed with %s in %v", err, work)
+        }
+    }()
+    do(work)
+}
+```
+
+上边的代码，如果do(work)发生panic，错误会被记录且协程会退出并释放，而其它协程不受影响。
+
+因为recover总是返回nil，除非直接在defer修饰的函数中调用，defer 修饰的代码可以调用那些自身可以使用panic和recover避免失败的库例程（库函数）。举例，safelyDo()中deffer修饰的函数可能在调用recover之前就调用了一个logging函数，panicking状态不会影响logging代码的运行。因为加入了恢复模式，函数 do（以及它调用的任何东西）可以通过调用panic来摆脱不好的情况。但是恢复是在panicking的协程内部的：不能被另外一个协程恢复。
+
 
 ***
 **参考资料**
