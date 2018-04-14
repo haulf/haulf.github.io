@@ -60,7 +60,7 @@ Go语言和C++、Java和C#一样属于C系。设计者们汲取了其它编程�
 
 - 依赖管理是现今软件开发的一个重要组成部分，但是C语言中“头文件”的概念却导致越来越多因为依赖关系而使得构建一个大型的项目需要长达几个小时的时间。人们越来越需要一门具有严格的、简洁的依赖关系分析系统从而能够快速编译的编程语言。这正是Go语言采用包模型的根本原因，这个模型通过严格的依赖关系检查机制来加快程序构建的速度，提供了非常好的可量测性。
 
-- Go语言在执行速度方面也可以与C/C++ 相提并论。
+- Go语言在执行速度方面也可以与C/C++相提并论。
 
 - 由于内存问题（通常称为内存泄漏）长期以来一直伴随着C++的开发者们，Go语言的设计者们认为内存管理不应该是开发人员所需要考虑的问题。因此尽管Go语言像其它静态语言一样执行本地代码，但它依旧运行在某种意义上的虚拟机，以此来实现高效快速的垃圾回收（使用了一个简单的标记-清除算法）。
 
@@ -198,42 +198,42 @@ Go编译器支持交叉编译，也就是说可以在一台机器上构建运行
 
 安装完成后，在终端里输入go version，若能够查看到版本信息，则说明安装成功了。
 
-接着需要配置环境变量。在自己的主目录下新建.bash_profile文件。在.bash_profile文件中输入：
+接着需要配置环境变量。在自己的主目录下新建`.bash_profile`文件，在此文件中输入：
 
 ```shell
-#haulf begin, add
+# haulf begin, add
 export GOPATH=/Users/aihaofeng/Documents/go
 export GOBIN=$GOPATH/bin
 export PATH=$PATH:$GOBIN
-#haulf end
+# haulf end
 ```
 
 接着运行source命令让设置生效：
 
-```go
+```shell
 source .bash_profile
 ```
 
-这里设置的GOPATH为/Users/aihaofeng/Documents/go，也就是把工作目录设置在Documents下的go目录，所以需要在自己的Documents目录下创建名称为go目录。
+这里设置的GOPATH为`/Users/aihaofeng/Documents/go`，也就是把工作目录设置在Documents下的go目录，所以需要在自己的Documents目录下创建名称为go目录。
 
-如果Mac电脑上安装的是ohmyzsh，则并不使用bash，因此上面的配置不会生效。需要修改的是.zshrc文件。
+如果Mac电脑上安装的是ohmyzsh，则并不使用bash，因此上面的配置不会生效。需要修改的是`.zshrc`文件。
 
 ```shell
 ➜  /Users/aihaofeng subl .zshrc
 
-# aihaofeng begin, 20171117
+# haulf begin, 20171117
 # Go environment config.
 export GOPATH="/Users/aihaofeng/go"
 export GOBIN="/Users/aihaofeng/go/bin"
 export PATH="$PATH:$GOBIN"
-# aihaofeng end
+# haulf end
 ```
 
-GOROOT: 指的是Go的安装目录。
+- GOROOT: 指的是Go的安装目录。
 
-GOPATH：指工作目录。
+- GOPATH：指工作目录。
 
-GOBIN：go install时位置。
+- GOBIN：go install时位置。
 
 目前在Mac上通过`go env`查看到的信息如下：
 
@@ -267,7 +267,7 @@ PKG_CONFIG="pkg-config"
 
 ### 3.6 安装目录清单
 
-Go 安装目录（$GOROOT）的文件夹结构应该如下所示：
+Go安装目录（$GOROOT）的文件夹结构应该如下所示：
 
 ```shell
 ➜  /Users/aihaofeng ls /usr/local/go
@@ -388,13 +388,14 @@ Go自带的工具集主要使用脚本和Go语言自身编写的，目前版本�
 可以在终端里输入go，直接查看其帮助信息，以看到go支持的命令工具。
 
 ## 5 基本结构和基本数据类型
+
 ### 5.1 文件名、关键字与标识符
 
 Go的源文件以.go为后缀名存储在计算机中。一个源文件可以包含任意多行的代码，Go本身没有对源文件的大小进行限制。
 
 在Go代码中的几乎所有东西都有一个名称或标识符。Go语言也是区分大小写的，这与C家族中的其它语言相同。有效的标识符必须以字符（可以使用任何UTF-8编码的字符或`_`）开头，然后紧跟着0个或多个字符或Unicode数字，如：`X56`、`group1`、`_x23`、`i`、`өԑ12`。以下是无效的标识符：
 - 1ab（以数字开头）
-- case（Go 语言的关键字）
+- case（Go语言的关键字）
 - a+b（运算符是不允许的）
 
 `_`本身就是一个特殊的标识符，被称为**空白标识符**。它可以像其它标识符那样用于变量的声明或赋值（任何类型都可以赋值给它），但任何赋给这个标识符的值都将被抛弃，因此这些值不能在后续的代码中使用，也不可以使用这个这个标识符作为变量对其它变量的进行赋值或运算。
@@ -404,72 +405,16 @@ Go的源文件以.go为后缀名存储在计算机中。一个源文件可以包
 下面列举了Go代码中会使用到的25个关键字或保留字：    
 
 ```go
-break
-case
-chan
-const
-continue
-default
-defer
-else
-fallthrough
-for
-func
-go
-goto
-if
-import
-interface
-map
-package
-range
-return
-select
-struct
-switch
-type
-var
+break case chan const continue default defer else fallthrough for func go goto if import
+interface map package range return select struct switch type var
 ```
 
 之所以刻意地将Go代码中的关键字保持的这么少，是为了简化在编译过程第一步中的代码解析。和其它语言一样，关键字不能够作标识符使用。除了以上介绍的这些关键字，Go 语言还有36个预定义标识符，其中包含了基本类型的名称和一些基本的内置函数。程序一般由关键字、常量、变量、运算符、类型和函数组成。
 
 ```go
-append
-bool
-byte
-cap
-close
-complex
-complex64
-complex128
-copy
-false
-float32
-float64
-imag
-int
-int8
-int16
-int32
-int64
-uint
-uint8
-uint16
-uint32
-uint64
-uintptr
-iota
-len
-make
-new
-nil
-panic
-print
-println
-real
-recover
-string
-true
+append bool byte cap close complex complex64 complex128 copy false float32 float64
+imag int int8 int16 int32 int64 uint uint8 uint16 uint32 uint64 uintptr
+iota len make new nil panic print println real recover string true
 ```
 
 程序中可能会使用到这些分隔符：圆括号()，方括号[]和花括号{}。
@@ -481,10 +426,10 @@ true
 ### 5.2 Go程序的基本结构和要素
 #### 5.2.1 包的概念、导入与可见性
 
-包是结构化代码的一种方式。每个程序都由包的概念组成，可以使用自身的包或者从其它包中导入内容。如同其它一些编程语言中的类库或命名空间的概念，每个Go文件都属于且仅属于一个包。一个包可以由许多以.go为扩展名的源文件组成，因此文件名和包名一般来说都是不相同的。必须在源文件中非注释的第一行指明这个文件属于哪个包，如：package main。package main表示一个可独立执行的程序。每个Go应用程序都包含一个名为main的包。一个应用程序可以包含不同的包，而且即使只使用main包也不必把所有的代码都写在一个巨大的文件里。可以用一些较小的文件，并且在每个文件非注释的第一行都使用package main来指明这些文件都属于main包。如果打算编译包名不是为main的源文件，如pack1，编译后产生的对象文件将会是pack1.a而不是可执行程序。
+包是结构化代码的一种方式。每个程序都由包的概念组成，可以使用自身的包或者从其它包中导入内容。如同其它一些编程语言中的类库或命名空间的概念，每个Go文件都属于且仅属于一个包。一个包可以由许多以`.go`为扩展名的源文件组成，因此文件名和包名一般来说都是不相同的。必须在源文件中非注释的第一行指明这个文件属于哪个包，如：package main。package main表示一个可独立执行的程序。每个Go应用程序都包含一个名为main的包。一个应用程序可以包含不同的包，而且即使只使用main包也不必把所有的代码都写在一个巨大的文件里。可以用一些较小的文件，并且在每个文件非注释的第一行都使用`package main`来指明这些文件都属于main包。如果打算编译包名不是为main的源文件，如pack1，编译后产生的对象文件将会是pack1.a而不是可执行程序。
 
 （1）标准库
-    在Go的安装文件里包含了一些可以直接使用的包，即**标准库**。Go的标准库包含了大量的包（如：fmt和os），但是也可以创建自己的包。
+在Go的安装文件里包含了一些可以直接使用的包，即**标准库**。Go的标准库包含了大量的包（如：fmt和os），但是也可以创建自己的包。
 
 如果想要构建一个程序，则包和包内的文件都必须以正确的顺序进行编译。包的依赖关系决定了其构建顺序。属于同一个包的源文件必须全部被一起编译，一个包即是编译时的一个单元，因此根据惯例，每个目录都只包含一个包。如果对一个包进行更改或重新编译，所有引用了这个包的客户端程序都必须全部重新编译。
 
@@ -527,9 +472,9 @@ main函数是每一个可执行程序所必须包含的，一般来说都是在�
 func main must have no arguments and no return values results.
 ```
 
-在程序开始执行并完成初始化后，第一个调用的函数是 main.main()，该函数一旦返回就表示程序已成功执行并立即退出。
+在程序开始执行并完成初始化后，第一个调用的函数是`main.main()` ，该函数一旦返回就表示程序已成功执行并立即退出。
 
-函数里的代码使用大括号 {} 括起来。左大括号 { 必须与方法的声明放在同一行，这是编译器的强制规定。符合规范的函数一般写成如下的形式：
+函数里的代码使用大括号`{}`括起来。左大括号`{` 必须与方法的声明放在同一行，这是编译器的强制规定。符合规范的函数一般写成如下的形式：
 
 ```go
 func functionName(parameter_list) (return_value_list) {
@@ -539,8 +484,8 @@ func functionName(parameter_list) (return_value_list) {
 
 其中：
 
-* parameter_list 的形式为 (param1 type1, param2 type2, …)
-* return_value_list 的形式为 (ret1 type1, ret2 type2, …)
+- parameter_list 的形式为 (param1 type1, param2 type2, …)
+- return_value_list 的形式为 (ret1 type1, ret2 type2, …)
 
 程序正常退出的代码为0，即`Program exited with code 0`。如果程序因为异常而被终止，则会返回非零值，如：1。这个数值可以用来测试是否成功执行一个程序。
 
@@ -560,11 +505,11 @@ godoc工具会收集这些注释并产生一个技术文档。
 
 (1) 对类型分类
 
-* 基本类型，如：int、float、bool、string；
+- 基本类型，如：int、float、bool、string；
 
-* 结构化的类型，如：struct、array、slice、map、channel；
+- 结构化的类型，如：struct、array、slice、map、channel；
 
-* 只描述类型的行为的，如：interface。
+- 只描述类型的行为的，如：interface。
 
   注意：
 
