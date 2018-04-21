@@ -1353,67 +1353,90 @@ string类型的零值为长度为零的字符串，即空字符串 ""。
 
 #### 5.7.1 前缀和后缀
 
-HasPrefix判断字符串s是否以prefix开头：
+- HasPrefix() 判断字符串s是否以prefix开头
 
-   `strings.HasPrefix(s, prefix string) bool`
+```go
+strings.HasPrefix(s, prefix string) bool
+```
 
-HasSuffix判断字符串s是否以suffix结尾：
+- HasSuffix() 判断字符串s是否以suffix结尾
 
-   `strings.HasSuffix(s, suffix string) bool`
+```go
+strings.HasSuffix(s, suffix string) bool
+```
 
 #### 5.7.2 字符串包含关系
 
-Contains判断字符串s是否包含substr：
+- Contains() 判断字符串s是否包含substr
 
-   `strings.Contains(s, substr string) bool`
+```go
+strings.Contains(s, substr string) bool
+```
 
 #### 5.7.3 判断子字符串或字符在父字符串中出现的位置
 
-Index返回字符串str在字符串s中的索引（str的第一个字符的索引），-1 表示字符串s不包含字符串str：
+- Index() 返回字符串str在字符串s中的索引（str的第一个字符的索引），-1 表示字符串s不包含字符串str。
 
-   `strings.Index(s, str string) int`
+```go
+strings.Index(s, str string) int
+```
 
-LastIndex返回字符串str在字符串s中最后出现位置的索引（str的第一个字符的索引），-1 表示字符串s不包含字符串str：
+- LastIndex() 返回字符串str在字符串s中最后出现位置的索引（str的第一个字符的索引），-1 表示字符串s不包含字符串str：
 
-  `strings.LastIndex(s, str string) int`
+```go
+strings.LastIndex(s, str string) int
+```
 
-如果ch是非ASCII编码的字符，建议使用以下函数来对字符进行定位：
+- 如果ch是非ASCII编码的字符，建议使用以下函数来对字符进行定位
 
-   `strings.IndexRune(s string, ch int) int`
+```go
+strings.IndexRune(s string, ch int) int
+```
 
 #### 5.7.4 字符串替换
 
-Replace用于将字符串str中的前n个字符串old替换为字符串new，并返回一个新的字符串，如果n = -1则替换所有字符串old为字符串new：
+- Replace() 用于将字符串str中的前n个字符串old替换为字符串new，并返回一个新的字符串，如果`n = -1`则替换所有字符串old为字符串new。
 
-   `strings.Replace(str, old, new, n) string`
+```go
+strings.Replace(str, old, new, n) string
+```
 
 #### 5.7.5 统计字符串出现次数
 
-Count用于计算字符串str在字符串s中出现的非重叠次数：
+- Count() 用于计算字符串str在字符串s中出现的非重叠次数
 
-   `strings.Count(s, str string) int`
+```go
+strings.Count(s, str string) int
+```
 
 #### 5.7.6 重复字符串
 
-Repeat用于重复count次字符串s并返回一个新的字符串：
+- Repeat() 用于重复count次字符串s并返回一个新的字符串：
 
-   `strings.Repeat(s, count int) string`
+```go
+strings.Repeat(s, count int) string
+```
 
 #### 5.7.7 修改字符串大小写
 
-ToLower将字符串中的 Unicode 字符全部转换为相应的小写字符：
+- ToLower() 将字符串中的Unicode字符全部转换为相应的小写字符
 
-   `strings.ToLower(s) string`
+```go
+strings.ToLower(s) string
+```
 
-ToUpper将字符串中的 Unicode 字符全部转换为相应的大写字符：
+- ToUpper() 将字符串中的Unicode字符全部转换为相应的大写字符：
 
-   `strings.ToUpper(s) string`
+```go
+strings.ToUpper(s) string
+```
 
 #### 5.7.8 修剪字符串
 
-可以使用strings.TrimSpace(s)来剔除字符串开头和结尾的空白符号；如果想要剔除指定字符，则可以使用strings.Trim(s, "cut")来将开头和结尾的cut去除掉。该函数的第二个参数可以包含任何字符，如果只想剔除开头或者结尾的字符串，则可以使用TrimLeft或者TrimRight来实现。
+可以使用`strings.TrimSpace(s)`来剔除字符串开头和结尾的空白符号；如果想要剔除指定字符，则可以使用`strings.Trim(s, "cut")`来将开头和结尾的cut去除掉。该函数的第二个参数可以包含任何字符，如果只想剔除开头或者结尾的字符串，则可以使用TrimLeft或者TrimRight来实现。
 
 #### 5.7.9 分割字符串
+
 - strings.Fields(s) 
 将会利用1个或多个空白符号来作为动态长度的分隔符将字符串分割成若干小块，并返回一个slice，如果字符串只包含空白符号，则返回一个长度为0的slice。
 
@@ -1449,40 +1472,38 @@ func parseCmdlineParameters()  {
 
 #### 5.7.10 拼接slice到字符串
 
-Join用于将元素类型为string的slice使用分割符号来拼接组成一个字符串：
+- Join() 用于将元素类型为string的slice使用分割符号来拼接组成一个字符串
 
-   `Strings.Join(sl []string, sep string)`
+```go
+Strings.Join(sl []string, sep string)
+```
 
 #### 5.7.11 从字符串中读取内容
 
-函数strings.NewReader(str)用于生成一个Reader并读取字符串中的内容，然后返回指向该Reader的指针，从其它类型读取内容的函数还有：
-
-* Read() 从 []byte中读取内容。
-* ReadByte() 和ReadRune() 从字符串中读取下一个byte或者rune。
+- strings.NewReader(str) 用于生成一个Reader并读取字符串中的内容，然后返回指向该Reader的指针。
+- Read()                 从`[]byte`中读取内容。
+- ReadByte()             和`ReadRune()`从字符串中读取下一个byte或者rune。
 
 #### 5.7.12 字符串与其它类型的转换
 
-与字符串相关的类型转换都是通过strconv包实现的。
-
-该包包含了一些变量用于获取程序运行的操作系统平台下int类型所占的位数，如：strconv.IntSize。
-
-任何类型T转换为字符串总是成功的。
+与字符串相关的类型转换都是通过strconv包实现的。该包包含了一些变量用于获取程序运行的操作系统平台下int类型所占的位数，如：strconv.IntSize。任何类型T转换为字符串总是成功的。
 
 针对从数字类型转换到字符串，Go提供了以下函数：
+- `strconv.Itoa(i int) string`  
+    - 返回数字 i 所表示的字符串类型的十进制数。
+- `strconv.FormatFloat(f float64, fmt byte, prec int, bitSize int)`    
+    - string将64位浮点型的数字转换为字符串，其中fmt表示格式（其值可以是'b'、'e'、'f'或'g'），prec表示精度，bitSize则使用32表示float32，用64表示float64。
 
-* strconv.Itoa(i int) string 返回数字 i 所表示的字符串类型的十进制数。
-* strconv.FormatFloat(f float64, fmt byte,prec int, bitSize int)      
+将字符串转换为其它类型tp并不总是可能的，可能会在运行时抛出错误`parsing "…": invalid argument`。
 
-string将 64 位浮点型的数字转换为字符串，其中 fmt 表示格式（其值可以是 'b'、'e'、'f' 或 'g'），prec 表示精度，bitSize则使用 32 表示 float32，用 64 表示 float64。
+针对从字符串类型转换为数字类型，Go提供了以下函数：
 
-将字符串转换为其它类型 tp 并不总是可能的，可能会在运行时抛出错误 parsing "…": invalid argument。
+- `strconv.Atoi(s string) (i int, err error)`
+    - 将字符串转换为int型。
+- `strconv.ParseFloat(s string, bitSize int)(f float64, err error)`
+    - 将字符串转换为float64型。
 
-针对从字符串类型转换为数字类型，Go 提供了以下函数：
-
-* strconv.Atoi(s string) (i int, err error)将字符串转换为int型。
-* strconv.ParseFloat(s string, bitSize int)(f float64, err error) 将字符串转换为float64型。
-
-利用多返回值的特性，这些函数会返回2个值，第1个是转换后的结果（如果转换成功），第2个是可能出现的错误，因此，一般使用以下形式来进行从字符串到其它类型的转换：   `val, err = strconv.Atoi(s)`
+利用多返回值的特性，这些函数会返回2个值，第1个是转换后的结果（如果转换成功），第2个是可能出现的错误，因此，一般使用以下形式来进行从字符串到其它类型的转换：`val, err = strconv.Atoi(s)`
 
 ```go
 package main
@@ -1516,15 +1537,17 @@ func main() {
 
 time包为提供了一个数据类型time.Time（作为值使用）以及显示和测量时间和日期的功能函数。
 
-当前时间可以使用 time.Now()获取，或者使用t.Day()、t.Minute()等等来获取时间的一部分；甚至可以自定义时间格式化字符串，例如：fmt.Printf("%02d.%02d.%4d\n", t.Day(), t.Month(), t.Year())将会输出 21.07.2011。
+当前时间可以使用`time.Now()`获取，或者使用`t.Day()`、`t.Minute()`等等来获取时间的一部分；甚至可以自定义时间格式化字符串，例如：`fmt.Printf("%02d.%02d.%4d\n", t.Day(), t.Month(), t.Year())`将会输出`21.07.2011`。
 
-Duration类型表示两个连续时刻所相差的纳秒数，类型为int64。Location类型映射某个时区的时间，UTC 表示通用协调世界时间。
+Duration类型表示两个连续时刻所相差的纳秒数，类型为int64。Location类型映射某个时区的时间，UTC表示通用协调世界时间。
 
-包中的一个预定义函数 func (t Time) Format(layout string) string可以根据一个格式化字符串来将一个时间t转换为相应格式的字符串，可以使用一些预定义的格式，如：time.ANSIC 或 time.RFC822。
+包中的一个预定义函数`func (t Time) Format(layout string)`string可以根据一个格式化字符串来将一个时间t转换为相应格式的字符串，可以使用一些预定义的格式，如：`time.ANSIC`或`time.RFC822`。
 
 一般的格式化设计是通过对于一个标准时间的格式化描述来展现的，这听起来很奇怪，但看下面这个例子就会一目了然：
 
-   `fmt.Println(t.Format("02 Jan 2006 15:04"))`
+```go
+fmt.Println(t.Format("02 Jan 2006 15:04"))
+```
 
 输出：
 
@@ -1532,13 +1555,40 @@ Duration类型表示两个连续时刻所相差的纳秒数，类型为int64。L
    21 Jul 2011 10:31
 ```
 
-如果需要在应用程序在经过一定时间或周期执行某项任务（事件处理的特例），则可以使用time.After或者time.Ticker。 另外，time.Sleep（Duration d）可以实现对某个进程（实质上是goroutine）时长为d的暂停。
+如果需要在应用程序在经过一定时间或周期执行某项任务（事件处理的特例），则可以使用`time.After`或者`time.Ticker`。另外，`time.Sleep(Doration d)`可以实现对某个进程（实质上是goroutine）时长为d的暂停。
+
+- 示例
+
+```go
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    ch := make(chan string)
+    for i := 0; i < 10; i++ {
+        go timeNow(ch)
+        fmt.Println(<-ch)
+        time.Sleep(500 * time.Millisecond)
+    }
+}
+
+func timeNow(ch chan string) {
+    tn := time.Now().Format("2018年04月21日 20点08分29秒.0000000 时区-0700")
+    ch <- tn
+}
+```
+
+在上面的例子中，格式化时间样式，利用goroutine实现获取和格式化当前时间，并且通过channel返回到主函数并打印出来。在主函数中，建立一个通道，并且写一个10次的for循环来执行timeNow()函数。为了让时间有一个间隔，每次循环间隔0.5秒。
 
 ### 5.9 指针
 
-不像Java和.NET，Go语言为程序员提供了控制数据结构的指针的能力，但是不能进行指针运算。通过给予程序员基本内存布局，Go语言允许控制特定集合的数据结构、分配的数量以及内存访问模式，这些对构建运行良好的系统是非常重要的：指针对于性能的影响是不言而喻的，而如果想要做的是系统编程、操作系统或者网络应用，指针更是不可或缺的一部分。
+不像Java和.NET，Go语言为程序员提供了控制数据结构的指针的能力，但是不能进行指针运算。通过给予程序员基本内存布局，Go语言允许控制特定集合的数据结构、分配的数量以及内存访问模式，这些对构建运行良好的系统是非常重要的。指针对于性能的影响是不言而喻的，而如果想要做的是系统编程、操作系统或者网络应用，指针更是不可或缺的一部分。
 
-程序在内存中存储它的值，每个内存块（或字）有一个地址，通常用十六进制数表示，如：0x6b0820 或 0xf84001d7f0。
+程序在内存中存储它的值，每个内存块（或字）有一个地址，通常用十六进制数表示，如：0x6b0820或0xf84001d7f0。
 
 Go语言的取地址符是&，放到一个变量前使用就会返回相应变量的内存地址。
 
@@ -1569,20 +1619,17 @@ intP存储了i1的内存地址；它指向了i1的位置，它引用了变量i1�
 
 注意事项:
 
-在书写表达式类似`var p *type`时，切记在`*`号和指针名称间留有一个空格，因为`- var ptype` 是语法正确的，但是在更复杂的表达式中，它容易被误认为是一个乘法表达式！
+- 在书写表达式类似`var p *type`时，切记在`*`号和指针名称间留有一个空格，因为`- var ptype`是语法正确的，但是在更复杂的表达式中，它容易被误认为是一个乘法表达式！
 
-Go语言和C、C++ 以及D语言这些低级（系统）语言一样，都有指针的概念。但是对于经常导致C语言内存泄漏继而程序崩溃的指针运算（所谓的指针算法，如：`pointer+2`，移动指针指向字符串的字节数或数组的某个位置）是不被允许的。Go语言中的指针保证了内存安全，更像是Java、C#和VB.NET 中的引用。
+- Go语言和C、C++ 以及D语言这些低级（系统）语言一样，都有指针的概念。但是对于经常导致C语言内存泄漏继而程序崩溃的指针运算（所谓的指针算法，如：`pointer+2`，移动指针指向字符串的字节数或数组的某个位置）是不被允许的。Go语言中的指针保证了内存安全，更像是Java、C#和VB.NET 中的引用。因此`c = *p++ `在Go语言的代码中是不合法的。
 
-因此`c = *p++ `在Go语言的代码中是不合法的。
-
-指针的一个高级应用是可以传递一个变量的引用（如函数的参数），这样不会传递变量的拷贝。指针传递是很廉价的，只占用4个或8个字节。当程序在工作中需要占用大量的内存，或很多变量，或者两者都有，使用指针会减少内存占用和提高效率。被指向的变量也保存在内存中，直到没有任何指针指向它们，所以从它们被创建开始就具有相互独立的生命周期。
+- 指针的一个高级应用是可以传递一个变量的引用（如函数的参数），这样不会传递变量的拷贝。指针传递是很廉价的，只占用4个或8个字节。当程序在工作中需要占用大量的内存，或很多变量，或者两者都有，使用指针会减少内存占用和提高效率。被指向的变量也保存在内存中，直到没有任何指针指向它们，所以从它们被创建开始就具有相互独立的生命周期。
 
 示例：5.9_pointer.go
 
 ```go
 /*
 @file:    5.9_pointer.go
-@version: v1.0
 @author:  haulf
 @date:    2017.08.13
 @brief:   Pointer test program. Also introduce two methods of converting integer to string.
