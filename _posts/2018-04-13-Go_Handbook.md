@@ -1414,12 +1414,38 @@ ToUpper将字符串中的 Unicode 字符全部转换为相应的大写字符：
 可以使用strings.TrimSpace(s)来剔除字符串开头和结尾的空白符号；如果想要剔除指定字符，则可以使用strings.Trim(s, "cut")来将开头和结尾的cut去除掉。该函数的第二个参数可以包含任何字符，如果只想剔除开头或者结尾的字符串，则可以使用TrimLeft或者TrimRight来实现。
 
 #### 5.7.9 分割字符串
+- strings.Fields(s) 
+将会利用1个或多个空白符号来作为动态长度的分隔符将字符串分割成若干小块，并返回一个slice，如果字符串只包含空白符号，则返回一个长度为0的slice。
 
-strings.Fields(s)将会利用1个或多个空白符号来作为动态长度的分隔符将字符串分割成若干小块，并返回一个slice，如果字符串只包含空白符号，则返回一个长度为0的slice。
+- strings.Split(s,sep) 用于自定义分割符号来对指定字符串进行分割，同样返回slice。
+因为这两个函数都会返回slice，所以习惯使用for-range循环来对其进行处理。
 
-strings.Split(s,sep) 用于自定义分割符号来对指定字符串进行分割，同样返回slice。
+- 示例
 
-因为这2个函数都会返回slice，所以习惯使用for-range循环来对其进行处理。
+```go
+func parseCmdlineParameters()  {
+    cmdlineFile, inputError := os.Open("cmdline")
+    if inputError != nil {
+        return
+    }
+    defer cmdlineFile.Close()
+
+    inputReader := bufio.NewReader(cmdlineFile)
+    for {
+        inputString, readerError := inputReader.ReadString('\n')
+        if readerError == io.EOF {
+            return
+        }
+
+        resultSlice := strings.Fields(inputString)
+        for _, item := range resultSlice {
+            fmt.Println(item)
+        }
+    }
+}
+```
+
+在上面例子中，调用strings包里的Fields()方法，对inputString字符串按照空白符进行分隔，返回一个字符串的切片。然后利用for-rang循环打印出切片里的每一个字符串值。
 
 #### 5.7.10 拼接slice到字符串
 
@@ -2123,50 +2149,36 @@ func main() {
     }
 ```
 
-#### 6.4.4 for-range 结构
+#### 6.4.4 for-range结构
 
-这是Go特有的一种的迭代结构，它在许多情况下都非常有用。它可以迭代任何一个集合（包括数组和map）。语法上很类似其它语言中foreach语句，但依旧可以获得每次迭代所对应的索引。一般形式为：for ix, val := range coll { }。
+这是Go特有的一种的迭代结构，它在许多情况下都非常有用。它可以迭代任何一个集合（包括数组和map）。语法上很类似其它语言中for-each语句，但依旧可以获得每次迭代所对应的索引。一般形式为：`for ix, val := range coll { }`。val始终为集合中对应索引的值拷贝，因此它一般只具有只读性质，对它所做的任何修改都不会影响到集合中原有的值。 
 
-val始终为集合中对应索引的值拷贝，因此它一般只具有只读性质，对它所做的任何修改都不会影响到集合中原有的值。一个字符串是Unicode编码的字符（或称之为 rune）集合，因此也可以用它迭代字符串：
-
-```go
- for pos, char := range str {
-    ...
- }
-```
-
-每个rune字符和索引在for-range循环中是一一对应的。它能够自动根据UTF-8规则识别Unicode编码的字符。 
-
-示例range_string.go：
+示例：
 
 ```go
-package main
-
-import "fmt"
-
-func main() {
-    str := "Go is a beautiful language!"
-    fmt.Printf("The length of str is: %d\n", len(str))
-    for pos, char := range str {
-        fmt.Printf("Character on position %d is: %c \n", pos, char)
+func parseCmdlineParameters()  {
+    cmdlineFile, inputError := os.Open("cmdline")
+    if inputError != nil {
+        return
     }
-    fmt.Println()
-    str2 := "Chinese: 日本語"
-    fmt.Printf("The length of str2 is: %d\n", len(str2))
-    for pos, char := range str2 {
-        fmt.Printf("character %c starts at 
-             byte position %d\n", char, pos)
-    }
-    fmt.Println()
-    fmt.Println("index int(rune) rune    char bytes")
-    for index, rune := range str2 {
-        fmt.Printf("%-2d      %d      %U '%c' % X\n",
-             index, rune, rune, rune, []byte(string(rune)))
+    defer cmdlineFile.Close()
+
+    inputReader := bufio.NewReader(cmdlineFile)
+    for {
+        inputString, readerError := inputReader.ReadString('\n')
+        if readerError == io.EOF {
+            return
+        }
+
+        resultSlice := strings.Fields(inputString)
+        for _, item := range resultSlice {
+            fmt.Println(item)
+        }
     }
 }
 ```
 
-可以打印结果，常用英文字符使用1个字节表示，而中文字符使用3个字符表示。
+在上面的例子中，利用for-range结构打印切片resultSlice里的每一个值。
 
 ### 6.5 Break与continue
 
@@ -8050,62 +8062,33 @@ func main() {
 * 程序示例
 
 ```go
-// @file:        Demo.go
-// @author:      haulf
-// @date:        2017.12.19
-// @go version:  1.9
-// @brief:       File input test.
-
-package main
-
-import (
-    "bufio"
-    "fmt"
-    "io"
-    "os"
-)
-
-func main() {
-    inputFile, inputError := os.Open("input.dat")
+func parseCmdlineParameters()  {
+    cmdlineFile, inputError := os.Open("cmdline")
     if inputError != nil {
-        fmt.Printf("An error occurred on opening the inputfile\n" +
-            "Does the file exist?\n" +
-            "Have you got acces toit?\n")
-        return // exit the function onerror
+        return
     }
+    defer cmdlineFile.Close()
 
-    defer inputFile.Close()
-    inputReader := bufio.NewReader(inputFile)
+    inputReader := bufio.NewReader(cmdlineFile)
     for {
         inputString, readerError := inputReader.ReadString('\n')
         if readerError == io.EOF {
             return
         }
 
-        fmt.Printf("The input was: %s", inputString)
+        resultSlice := strings.Fields(inputString)
+        for _, item := range resultSlice {
+            fmt.Println(item)
+        }
     }
 }
 ```
 
-【input.dat】
-
-```shell
-hello, haulf.
-Welcom!
-```
-
-* 程序运行结果
-
-```shell
-The input was: hello, haulf.
-The input was: Welcom!
-```
-
 * 程序说明
 
-变量`inputFile`是`*os.File`类型的。该类型是一个结构，表示一个打开文件的描述符（文件句柄）。然后使用os包里的Open函数来打开一个文件。该函数的参数是文件名，类型为string。在上面的程序中，以只读模式打开input.dat文件。
+变量`cmdlineFile`是`*os.File`类型的。该类型是一个结构，表示一个打开文件的描述符（文件句柄）。然后使用os包里的Open函数来打开一个文件。该函数的参数是文件名，类型为string。在上面的程序中，以只读模式打开cmdline文件。
 
-如果文件不存在或者程序没有足够的权限打开这个文件，Open函数会返回一个错误：`inputFile, inputError =os.Open("input.dat")`。如果文件打开正常，就使用defer.Close()语句确保在程序退出前关闭该文件，然后使用bufio.NewReader来获得一个读取器变量。
+如果文件不存在或者程序没有足够的权限打开这个文件，Open函数会返回一个错误：`inputFile, inputError =os.Open("cmdline")`。如果文件打开正常，就使用defer.Close()语句确保在程序退出前关闭该文件，然后使用bufio.NewReader来获得一个读取器变量。
 
 通过使用bufio包提供的读取器（写入器也类似），如上面程序所示，可以很方便的操作相对高层的string对象，而避免了去操作比较底层的字节。
 
