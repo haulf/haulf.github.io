@@ -461,9 +461,7 @@ godoc工具会收集这些注释并产生一个技术文档。
 (1) 对类型分类
 
 - 基本类型，如：int、float、bool、string；
-
 - 结构化的类型，如：struct、array、slice、map、channel；
-
 - 只描述类型的行为的，如：interface。
 
   注意：
@@ -764,13 +762,19 @@ var (
 
 函数Printf可以在fmt包外部使用，这是因为它以大写字母P开头，该函数主要用于打印输出到控制台。通常使用的格式化字符串作为第一个参数：
 
-   `func Printf(format string, list of variables to be printed)`
+```go
+func Printf(format string, list of variables to be printed)
+```
 
 这个格式化字符串可以含有一个或多个的格式化标识符，例如：%..，其中..可以被不同类型所对应的标识符替换，如%s代表字符串标识符、%v代表使用类型的默认输出格式的标识符。这些标识符所对应的值从格式化字符串后的第一个逗号开始按照相同顺序添加，如果参数超过1个则同样需要使用逗号分隔。使用这些占位符可以很好地控制格式化输出的文本。
 
 函数fmt.Sprintf与Printf的作用是完全相同的，不过前者将格式化后的字符串以返回值的形式返回给调用者，因此可以在程序中使用包含变量的字符串。
 
 函数fmt.Print和fmt.Println会自动使用格式化标识符%v对字符串进行格式化，两者都会在每个参数之间自动增加空格，而后者还会在字符串的最后加上一个换行符。
+
+**格式化标识符介绍**
+- https://studygolang.com/articles/2644
+
 
 #### 5.4.4 使用:=赋值操作符
 
@@ -2613,7 +2617,7 @@ type Options struct {
 如果一个变长参数的类型没有被指定，则可以使用默认的空接口interface{}，这样就可以接受任何类型的参数。该方案不仅可以用于长度未知的参数，还可以用于任何不确定类型的参数。一般而言会使用一个for-range循环以及switch结构对每个参数的类型进行判断。
 
 ```go
-func typecheck(..,..,values ...interface{}) {
+func typecheck(.., .., values ...interface{}) {
     for _, value := range values {
         switch v := value.(type) {
             case int: ...
@@ -2627,63 +2631,20 @@ func typecheck(..,..,values ...interface{}) {
 ```
 
 ### 7.4 defer和追踪
-关键字defer允许推迟到函数返回之前（或任意位置执行return语句之后）一刻才执行某个语句或函数（为什么要在返回之后才执行这些语句？因为return语句同样可以包含一些操作，而不是单纯地返回某个值）。关键字defer的用法类似于面向对象编程语言Java和C#的finally语句块，它一般用于释放某些已分配的资源。
 
-#### 7.4.1 defer任务
+关键字defer允许推迟到函数返回之前（或任意位置执行return语句之后）一刻才执行某个语句或函数。为什么要在返回之后才执行这些语句？因为return语句同样可以包含一些操作，而不是单纯地返回某个值。defer的用法类似于面向对象编程语言Java和C#的finally语句块，它一般用于释放某些已分配的资源。
 
-* 程序示例
+#### 7.4.1 多个defer任务执行顺序
 
-```go
-/*
-@file:    defer.go
-@version: v1.0
-@author:  haulf
-@date:    2017.11.12
-@brief:   Function test program.
-*/
+当有多个defer行为被注册时，它们会以逆序执行。这种情况类似栈，即后进先出。
 
-package main
-
-import "fmt"
-
-func main() {
-    function1()
-}
-
-func function1() {
-    fmt.Printf("In function1 at the top\n")
-    defer function2()
-    fmt.Printf("In function1 at the bottom!\n")
-}
-
-func function2() {
-    fmt.Printf("function2: Deferred until the end of the calling function!")
-}
-```
-
-* 程序运行结果
+- 程序示例
 
 ```go
-In function1 at the top
-In function1 at the bottom!
-function2: Deferred until the end of the calling function!
-```
-
-* 程序说明
-在程序function1()返回前，执行function2()。
-
-#### 7.4.2 传递参数给defer任务
-
-* 程序示例
-
-```go
-/*
-@file:    defer_param.go
-@version: v1.0
-@author:  haulf
-@date:    2017.11.12
-@brief:   Function test program.
-*/
+// file:    DeferParamSequence.go
+// author:  haulf 
+// date:    2017.11.12
+// brief:   Test the sequence of multi defer params.
 
 package main
 
@@ -2700,26 +2661,41 @@ func f() {
 }
 ```
 
-* 程序输出结果
+- 运行结果
 
 ```go
 i=4 i=3 i=2 i=1 i=0
 ```
 
-* 程序说明
+#### 7.4.2 defer使用场景
 
-当有多个defer行为被注册时，它们会以逆序执行。这种情况类似栈，即后进先出。
+关键字defer主要进行一些函数执行完成后的收尾工作。
 
-#### 7.4.3 defer使用场景
+1. 关闭文件流
 
-关键字defer允许进行一些函数执行完成后的收尾工作，例如：
-
-1. 关闭文件流：
+- 程序示例
 
 ```go
-   //open a file 
+func parseCmdlineParameters()  {
+    cmdlineFile, inputError := os.Open("cmdline")
+    if inputError != nil {
+        return
+    }
+    defer cmdlineFile.Close()
 
-   defer file.Close()
+    inputReader := bufio.NewReader(cmdlineFile)
+    for {
+        inputString, readerError := inputReader.ReadString('\n')
+        if readerError == io.EOF {
+            return
+        }
+
+        resultSlice := strings.Fields(inputString)
+        for _, item := range resultSlice {
+            fmt.Println(item)
+        }
+    }
+}
 ```
 
 2. 解锁一个加锁的资源
@@ -2745,7 +2721,7 @@ i=4 i=3 i=2 i=1 i=0
    defer disconnectFromDB()
 ```
 
-#### 7.4.4 使用defer任务实现代码追踪
+#### 7.4.3 使用defer任务实现代码追踪
 
 一个基础但十分实用的实现代码执行追踪的方案就是在进入和离开某个函数打印相关的消息，即可以提炼为下面两个函数：
 
@@ -2756,16 +2732,11 @@ i=4 i=3 i=2 i=1 i=0
 
 以下代码展示了何时调用两个函数：
 
-* 程序示例
-
 ```go
-/*
-@file:    defer_tracing.go
-@version: v1.0
-@author:  haulf
-@date:    2017.11.12
-@brief:   Function test program.
-*/
+// file:    DeferTracing.go
+// author:  haulf
+// date:    2017.11.12
+// brief:   Tracing function with defer.
 
 package main
 
@@ -2797,27 +2768,13 @@ func main() {
 }
 ```
 
-* 程序运行结果
-
-```go
-entering: b
-in b
-entering: a
-in a
-leaving: a
-leaving: b
-```
-
 上面的代码还可以修改为更加简便的版本：
 
 ```go
-/*
-@file:    defer_tracingL_new.go
-@version: v1.0
-@author:  haulf
-@date:    2017.11.12
-@brief:   Function test program.
-*/
+// file:    DeferTracing.go
+// author:  haulf
+// date:    2017.11.12
+// brief:   Tracing function with defer.
 
 package main
 
@@ -2848,20 +2805,17 @@ func main() {
 }
 ```
 
-#### 7.4.5 使用defer语句来记录函数的参数和返回值
+#### 7.4.4 使用defer语句来记录函数的参数和返回值
 
-下面的代码展示了另一种在调试时使用defer语句的手法。
+下面的代码展示了另一种在调试时使用defer语句的方法。
 
-* 程序示例
+- 程序示例
 
 ```go
-/*
-@file:    defer_log_value.go
-@version: v1.0
-@author:  haulf
-@date:    2017.11.12
-@brief:   Function test program.
-*/
+// file:    RecordParametersAndReturns.go
+// author:  aihaofeng
+// date:    2017.11.12
+// brief:   Record function's parameters and returns by defer.
 
 package main
 
@@ -2870,29 +2824,23 @@ import (
     "log"
 )
 
-func func1(s string) (n int, err error) {
+func main() {
+    myfunction("Go")
+}
+
+func myfunction(s string) (n int, err error) {
     defer func() {
-        log.Printf("func1(%q) = %d, %v", s, n, err)
+        log.Printf("myfunction(%q) = %d, %v", s, n, err)
     }()
     return 7, io.EOF
 }
-
-func main() {
-    func1("Go")
-}
-```
-
-* 程序运行结果
-
-```go
-2017/11/12 17:23:10 func1("Go") = 7, EOF
 ```
 
 ### 7.5 内置函数
 
 Go语言拥有一些不需要进行导入操作就可以使用的内置函数。它们有时可以针对不同的类型进行操作，例如：len、cap和append，或必须用于系统级的操作，例如：panic。因此，它们需要直接获得编译器的支持。
 
-| 名称                | 说明                                       |
+| 名称              | 说明                                      |
 | ----------------- | ---------------------------------------- |
 | close             | 用于管道通信                                   |
 | len、cap           | len 用于返回某个类型的长度或数量（字符串、数组、切片、map 和管道）；  cap 是容量的意思，用于返回某个类型的最大容量（只能用于切片和 map） |
