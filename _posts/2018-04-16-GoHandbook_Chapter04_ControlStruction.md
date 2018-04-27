@@ -1,10 +1,10 @@
 ---
 layout: post
-title:  "控制结构"
+title:  "Go教程04_控制结构"
 date:   2018-04-16 08:08:04
 categories: Go语言编程
 tags: Go 
-excerpt: Go让人感觉像是Python或Ruby这样的动态语言，但却又拥有像C或者Java这类语言的高性能和安全性。Go语言出现的目的是希望在编程领域创造最实用的方式来进行软件开发。
+excerpt: Go语言中提供了一些条件结构与分支结构。
 ---
 
 * content

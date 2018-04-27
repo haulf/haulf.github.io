@@ -1,10 +1,10 @@
 ---
 layout: post
-title:  "字典"
+title:  "Go教程07_字典"
 date:   2018-04-19 08:08:04
 categories: Go语言编程
 tags: Go 
-excerpt: Go让人感觉像是Python或Ruby这样的动态语言，但却又拥有像C或者Java这类语言的高性能和安全性。Go语言出现的目的是希望在编程领域创造最实用的方式来进行软件开发。
+excerpt: Go受Python影响，也包含字典。Map是一种特殊的数据结构。
 ---
 
 * content

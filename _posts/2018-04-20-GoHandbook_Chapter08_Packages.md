@@ -1,17 +1,15 @@
 ---
 layout: post
-title:  "包"
+title:  "Go教程08_包"
 date:   2018-04-20 08:08:04
 categories: Go语言编程
 tags: Go 
-excerpt: Go让人感觉像是Python或Ruby这样的动态语言，但却又拥有像C或者Java这类语言的高性能和安全性。Go语言出现的目的是希望在编程领域创造最实用的方式来进行软件开发。
+excerpt: 像fmt、os等这样具有常用功能的内置包在Go语言中有150个以上，它们被称为标准库，大部分(一些底层的除外)内置于Go本身。
 ---
 
 * content
 {:toc}
 
-
-## 10 包
 
 ## 1 标准库概述
 
