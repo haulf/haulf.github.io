@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Go语言介绍"
+title:  "Go教程-chapter01 Go语言介绍"
 date:   2018-04-13 08:08:04
 categories: Go语言编程
 tags: Go 
