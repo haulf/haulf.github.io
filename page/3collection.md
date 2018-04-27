@@ -16,9 +16,12 @@ type: page
     生成 box-shadow 的工具。
 
 
-## github
+## 参考资料
 - 360 Enterprise Security
     - https://github.com/360EntSecGroup-Skylar
+- 陈皓专栏
+    - https://blog.csdn.net/haoel
+    - https://coolshell.cn
 
 
 ## 喜欢的博客
