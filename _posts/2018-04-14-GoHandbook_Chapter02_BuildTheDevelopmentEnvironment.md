@@ -1,10 +1,10 @@
 ---
 layout: post
-title:  "Go开发环境搭建与配置"
+title:  "Go教程02_开发环境搭建与配置"
 date:   2018-04-14 08:08:04
 categories: Go语言编程
 tags: Go 
-excerpt: Go是跨平台的，可以在Windows、Linux、MacOS等操作系统下进行开发。
+excerpt: Go是跨平台的，可以在Windows、Linux、MacOS等操作系统下进行开发。本部分介绍Go的安装与运行环境、开发工具等。
 ---
 
 * content
