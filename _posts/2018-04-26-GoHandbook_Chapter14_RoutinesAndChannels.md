@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Go教程14_协程与通道"
+title:  "Go教程14-协程与通道"
 date:   2018-04-26 08:08:04
 categories: Go语言编程
 tags: Go 

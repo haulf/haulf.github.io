@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Go教程12_错误处理与测试"
+title:  "Go教程12-错误处理与测试"
 date:   2018-04-24 08:08:04
 categories: Go语言编程
 tags: Go 

@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Go教程09_结构体与方法"
+title:  "Go教程09-结构体与方法"
 date:   2018-04-21 08:08:04
 categories: Go语言编程
 tags: Go 

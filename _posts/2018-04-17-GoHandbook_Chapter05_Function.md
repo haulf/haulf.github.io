@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Go教程05_函数"
+title:  "Go教程05-函数"
 date:   2018-04-17 08:08:04
 categories: Go语言编程
 tags: Go 

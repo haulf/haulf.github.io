@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Go教程11_I/O操作"
+title:  "Go教程11-I/O操作"
 date:   2018-04-23 08:08:04
 categories: Go语言编程
 tags: Go 

@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Go教程07_字典"
+title:  "Go教程07-字典"
 date:   2018-04-19 08:08:04
 categories: Go语言编程
 tags: Go 

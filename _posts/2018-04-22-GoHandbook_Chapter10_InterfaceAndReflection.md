@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Go教程10_接口与反射"
+title:  "Go教程10-接口与反射"
 date:   2018-04-22 08:08:04
 categories: Go语言编程
 tags: Go 

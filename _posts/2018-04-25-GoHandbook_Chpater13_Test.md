@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Go教程13_测试和性能优化"
+title:  "Go教程13-测试和性能优化"
 date:   2018-04-25 08:08:04
 categories: Go语言编程
 tags: Go 
@@ -19,9 +19,9 @@ Go的测试工具 gotest。
 
 名为 testing 的包被专门用来进行自动化测试，日志和错误报告。并且还包含一些基准测试函数的功能。
 
-备注：gotest 是 Unix bash 脚本，所以在 Windows 下需要配置 MINGW 环境；在 Windows 环境下把所有的 pkg/linux_amd64 替换成 pkg/windows。
+备注：gotest 是 Unix bash 脚本，所以在 Windows 下需要配置 MINGW 环境；在 Windows 环境下把所有的`pkg/linux_amd64`替换成 pkg/windows。
 
-对一个包做（单元）测试，需要写一些可以频繁（每次更新后）执行的小块测试单元来检查代码的正确性。于是必须写一些 Go 源文件来测试代码。测试程序必须属于被测试的包，并且文件名满足这种形式*_test.go，所以测试代码和包中的业务代码是分开的。
+对一个包做（单元）测试，需要写一些可以频繁（每次更新后）执行的小块测试单元来检查代码的正确性。于是必须写一些 Go 源文件来测试代码。测试程序必须属于被测试的包，并且文件名满足这种形式`*_test.go`，所以测试代码和包中的业务代码是分开的。
 
 `_test`程序不会被普通的 Go 编译器编译，所以当放应用部署到生产环境时它们不会被部署；只有 gotest 会编译所有的程序：普通程序和测试程序。
 
@@ -37,19 +37,19 @@ T是传给测试函数的结构类型，用来管理测试状态，支持格式�
 
 用下面这些函数来通知测试失败：
 
-1）func (t *T)Fail()
+1）`func (t *T)Fail()`
 
 标记测试函数为失败，然后继续执行（剩下的测试）。
 
-2）func (t *T)FailNow()
+2）`func (t *T)FailNow()`
 
 标记测试函数为失败并中止执行；文件中别的测试也被略过，继续执行下一个文件。
 
-3）func (t *T)Log(args ...interface{})
+3）`func (t *T)Log(args ...interface{})`
 
 args 被用默认的格式格式化并打印到错误日志中。
 
-4）func (t *T)Fatal(args ...interface{})
+4）`func (t *T)Fatal(args ...interface{})`
 
 结合 先执行 3），然后执行 2）的效果。
 
@@ -79,7 +79,7 @@ testing包中有一些类型和函数可以用来做简单的基准测试；测�
    }
 ```
 
-命令 go test –test.bench=.* 会运行所有的基准测试函数；代码中的函数会被调用 N 次（N是非常大的数，如 N =1000000），并展示 N 的值和函数执行的平均时间，单位为ns（纳秒，ns/op）。如果是用testing.Benchmark 调用这些函数，直接运行程序即可。
+命令`go test –test.bench=.*`会运行所有的基准测试函数；代码中的函数会被调用 N 次（N是非常大的数，如 N =1000000），并展示 N 的值和函数执行的平均时间，单位为ns（纳秒，ns/op）。如果是用testing.Benchmark 调用这些函数，直接运行程序即可。
 
 ## 2 测试的具体例子
 

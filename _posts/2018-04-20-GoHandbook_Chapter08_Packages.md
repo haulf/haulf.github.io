@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Go教程08_包"
+title:  "Go教程08-包"
 date:   2018-04-20 08:08:04
 categories: Go语言编程
 tags: Go 

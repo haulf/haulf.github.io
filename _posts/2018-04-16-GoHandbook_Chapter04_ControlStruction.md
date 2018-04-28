@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Go教程04_控制结构"
+title:  "Go教程04-控制结构"
 date:   2018-04-16 08:08:04
 categories: Go语言编程
 tags: Go 

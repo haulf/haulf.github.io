@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Go教程03_基本结构与基本数据类型"
+title:  "Go教程03-基本结构与基本数据类型"
 date:   2018-04-15 08:08:04
 categories: Go语言编程
 tags: Go 

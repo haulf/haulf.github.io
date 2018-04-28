@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Go教程06_数组与切片"
+title:  "Go教程06-数组与切片"
 date:   2018-04-18 08:08:04
 categories: Go语言编程
 tags: Go 
