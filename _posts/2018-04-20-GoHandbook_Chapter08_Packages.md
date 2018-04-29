@@ -4,7 +4,7 @@ title:  "Go教程08-包"
 date:   2018-04-20 08:08:04
 categories: Go语言编程
 tags: Go 
-excerpt: 像fmt、os等这样具有常用功能的内置包在Go语言中有150个以上，它们被称为标准库，大部分(一些底层的除外)内置于Go本身。
+excerpt: 在Go语言中，像fmt、os等这样具有常用功能的内置包有150个以上，它们被称为标准库，大部分内置于Go本身。
 ---
 
 * content
@@ -13,63 +13,29 @@ excerpt: 像fmt、os等这样具有常用功能的内置包在Go语言中有150�
 
 ## 1 标准库概述
 
-像fmt、os等这样具有常用功能的内置包在Go语言中有150个以上，它们被称为标准库，大部分(一些底层的除外)内置于Go本身。
-
-* unsafe: 包含了一些打破Go语言“类型安全”的命令，一般的程序中不会被使用，可用在C/C++ 程序的调用中。
-* os: 提供给一个平台无关性的操作系统功能接口，采用类Unix设计，隐藏了不同操作系统间差异，让不同的文件系统和操作系统对象表现一致。
-* os/exec: 提供运行外部操作系统命令和程序的方式。
-* syscall: 底层的外部包，提供了操作系统底层调用的基本接口。
-* archive/tar 和 /zip-compress：压缩(解压缩)文件功能。
-* fmt: 提供了格式化输入输出功能。
-* io: 提供了基本输入输出功能，大多数是围绕系统功能的封装。
-* bufio: 缓冲输入输出功能的封装。
-* path/filepath: 用来操作在当前系统中的目标文件名路径。
-* flag: 对命令行参数的操作。　　
-* strings: 提供对字符串的操作。
-* strconv: 提供将字符串转换为基础类型的功能。
-* unicode: 为 unicode 型的字符串提供特殊的功能。
-* regexp: 正则表达式功能。
-* bytes: 提供对字符型分片的操作。
-* index/suffixarray: 子字符串快速查询。
-* math: 基本的数学函数。
-* math/cmath: 对复数的操作。
-* math/rand: 伪随机数生成。
-* sort: 为数组排序和自定义集合。
-* math/big: 大数的实现和计算。 　　
-* list: 双链表。
-* time: 日期和时间的基本操作。
-* log: 记录程序运行时产生的日志,将在后面的章节使用它。
-* encoding/json: 读取并解码和写入并编码 JSON 数据。
-* encoding/xml:简单的 XML1.0 解析器
-* text/template:生成像 HTML 一样的数据与文本混合的数据驱动模板
-* net: 网络数据的基本操作。
-* http: 提供一个可扩展HTTP服务器和基础客户端，解析HTTP请求和回复。
-* html: HTML5 解析器。
-* runtime: Go 程序运行时的交互操作，例如垃圾回收和协程创建。
-* reflect: 实现通过程序运行时反射，让程序操作任意类型的变量。
-
-
+像fmt、os等这样具有常用功能的内置包在Go语言中有150个以上，它们被称为标准库，大部分(一些底层的除外)内置于Go本身。具体可以到Go官方网站查阅各个包的情况：https://golang.google.cn/pkg/
 
 ## 2 regexp包
 
 如果是简单模式匹配，使用Match方法便可：
 
-   `ok, _ := regexp.Match(pat, []byte(searchIn))`
+```go
+ok, _ := regexp.Match(pat, []byte(searchIn))
+```
 
-变量ok将返回true或者false。
+在上面代码中，变量ok将返回true或者false。
 
 可以使用MatchString进行匹配：
 
-   `ok, _ := regexp.MatchString(pat, searchIn)`​
-
-* 程序示例
-
 ```go
-// @file:        package_regexp.go
-// @version:     1.0
+ok, _ := regexp.MatchString(pat, searchIn)
+```
+
+- 程序示例
+```go
+// @file:        PackageRegexp.go
 // @author:      haulf
 // @date:        2017.11.20
-// @go version:  1.9
 // @brief:       Regexp test.
 
 package main
@@ -81,40 +47,39 @@ import (
 )
 
 func main() {
-    //目标字符串
-    searchIn := "John: 2578.34 William: 4567.23 Steve: 5632.18"
-    pat := "[0-9]+.[0-9]+" //正则
-    f := func(s string) string {
-        v, _ := strconv.ParseFloat(s, 32)
-        return strconv.FormatFloat(v*2, 'f', 2, 32)
-    }
+    originalString := "John: 2578.34 William: 4567.23 Steve: 5632.18"
 
-    if ok, _ := regexp.Match(pat, []byte(searchIn)); ok {
+    fmt.Println("Original string is:", originalString)
+
+    fmt.Println("Start to match")
+    patternString := "[0-9]+.[0-9]+"
+    if ok, _ := regexp.Match(patternString, []byte(originalString)); ok {
         fmt.Println("Match Found!")
     }
 
-    re, _ := regexp.Compile(pat)
-    //将匹配到的部分替换为"##.#"
-    str := re.ReplaceAllString(searchIn, "##.#")
+    regexpObject, _ := regexp.Compile(patternString)
+
+    str := regexpObject.ReplaceAllString(originalString, "##.#")
     fmt.Println(str)
 
-    //参数为函数时
-    str2 := re.ReplaceAllStringFunc(searchIn, f)
-    fmt.Println(str2)
+    paramFunc := func(s string) string {
+        v, _ := strconv.ParseFloat(s, 32)
+        return strconv.FormatFloat(v*2, 'f', 2, 32)
+    }
+    strFunc := regexpObject.ReplaceAllStringFunc(originalString, paramFunc)
+    fmt.Println(strFunc)
 }
 ```
 
-* 程序运行结果
-
+- 程序运行结果
 ```go
 Match Found!
 John: ##.# William: ##.# Steve: ##.#
 John: 5156.68 William: 9134.46 Steve: 11264.36
 ```
 
-* 程序说明
-
-Compile函数也可能返回一个错误，在使用时忽略对错误的判断是因为确信自己正则表达式是有效的。当用户输入或从数据中获取正则表达式的时候，有必要去检验它的正确性。另外也可以使用MustCompile方法，它可以像Compile方法一样检验正则的有效性，但是当正则不合法时程序将panic。
+- 程序说明
+`regexp.Compile()`函数也可能返回一个错误，在使用时忽略对错误的判断是因为确信自己正则表达式是有效的。当用户输入或从数据中获取正则表达式的时候，有必要去检验它的正确性。另外也可以使用MustCompile方法，它可以像Compile方法一样检验正则的有效性，但是当正则不合法时程序将panic。
 
 ## 3 锁和sync包
 
@@ -172,10 +137,8 @@ Compile函数也可能返回一个错误，在使用时忽略对错误的判断�
 
 ```go
 // @file:        Big.go
-// @version:     1.0
 // @author:      haulf
 // @date:        2017.12.09
-// @go version:  1.9
 // @brief:       Big test.
 
 package main
@@ -206,7 +169,7 @@ func main() {
 }
 ```
 
-* 运行结果
+- 运行结果
 
 ```shell
 Big Int: 43492122561469640008497075573153004
@@ -239,17 +202,17 @@ init函数是不能被调用的。
 
 godoc工具在显示自定义包中的注释也有很好的效果：注释必须以//开始并无空行放在声明（包，类型，函数）前。godoc会为每个文件生成一系列的网页。
 
-* 命令行下进入目录下并输入命令
+- 命令行下进入目录下并输入命令
 
  `godoc -http =:6060 -goroot="."`
 
-（. 是指当前目录，-goroot参数可以是/path/to/my/package1这样的形式指出package1在源码中的位置或接受用冒号形式分隔的路径，无根目录的路径为相对于当前目录的相对路径）
+`.`是指当前目录，`-goroot`参数可以是/path/to/my/package1这样的形式指出package1在源码中的位置或接受用冒号形式分隔的路径，无根目录的路径为相对于当前目录的相对路径。
 
-* 在浏览器打开地址：http://localhost:6060
+- 在浏览器打开地址：http://localhost:6060
 
 然后会看到本地的godoc页面从左到右一次显示出目录中的包。
 
-如果在一个团队中工作，并在源代码树被存储在网络硬盘上，就可以使用godoc给所有团队成员连续文档的支持。通过设置sync_minutes=n，甚至可以让它每n分钟自动更新文档！
+如果在一个团队中工作，并在源代码树被存储在网络硬盘上，就可以使用godoc给所有团队成员连续文档的支持。通过设置`sync_minutes=n`，甚至可以让它每n分钟自动更新文档！
 
 ## 7 使用go install安装自定义包
 
