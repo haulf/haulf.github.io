@@ -2,7 +2,7 @@
 layout: post
 title:  "Everything happens for the best!"
 date:   2018-04-05 14:13:54
-categories: 生活 
+categories: Life 
 tags: 
 excerpt: Everything happens for the best! 我一直坚信生命中所有的遇见绝非偶然，一切都是最好的安排。
 mathjax: true
